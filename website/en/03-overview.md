@@ -34,7 +34,7 @@ $ cargo --version
 We'll build from scratch incrementally, using the Rust package manager Cargo. and the final file structure will look like this:
 
 ```
-.
+os1k                     - Root folder and operating system name
 ├── disk/                - File system contents
 ├── Cargo.toml           - Cargo workspace configuration
 ├── common               - Package for common library
@@ -76,3 +76,10 @@ We'll build from scratch incrementally, using the Rust package manager Cargo. an
 > [!TIP]
 >
 > In this book, "user land" is sometimes abbreviated as "user". Consider it as "applications", and do not confuse it with "user account"!
+
+In Rust, the folder name of your project matters! Choose a name for your operating system, and create the folder. In this tutorial, we will call our operating system `os1k`, but you can choose anything you like.
+
+```
+$ mkdir os1k && cd os1k
+```
+Let's get cracking!
