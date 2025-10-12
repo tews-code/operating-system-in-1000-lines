@@ -97,11 +97,6 @@ QEMU 8.0.2 monitor - type 'help' for more information
 > C-a C-a  sends C-a
 > ```
 
-## Operating System workspace
-
-
-
-
 ## Kernel package
 
 We start creating the kernel package using Cargo.
@@ -111,6 +106,7 @@ $ cargo new kernel && cd kernel
 ```
 
 This will create a subfolder `kernel`, as well as configuration files and an example Hello World Rust source file.
+
 
 ## Linker script
 
@@ -157,6 +153,7 @@ Here are the key points of the linker script:
 - The `.text.boot` section is always placed at the beginning.
 - Each section is placed in the order of `.text`, `.rodata`, `.data`, and `.bss`.
 - The kernel stack comes after the `.bss` section, and its size is 128KB.
+- Finally, we ask the linker to discard any `.eh_frame` using the `/DISCARD/` command, as this is only needed for stack unwinding, which we will not use.
 
 `.text`, `.rodata`, `.data`, and `.bss` sections mentioned here are data areas with specific roles:
 
@@ -173,7 +170,17 @@ The `*(.text .text.*)` directive places the `.text` section and any sections sta
 
 The `.` symbol represents the current address. It automatically increments as data is placed, such as with `*(.text)`. The statement `. += 128 * 1024` means "advance the current address by 128KB". The `ALIGN(4)` directive ensures that the current address is adjusted to a 4-byte boundary.
 
-Finally, `__bss = .` assigns the current address to the symbol `__bss`. In C language, you can refer to a defined symbol using `extern char symbol_name`.
+Finally, `__bss = .` assigns the current address to the symbol `__bss`. 
+
+In Rust, you can refer to a defined symbol using 
+
+```rust
+unsafe extern "C" {
+   static symbol_name: u8;
+}
+```
+
+Here we use `unsafe` to mark that the Rust compiler is relying on our linker script to provide a valid symbol, it is `extern` to the Rust source files, the symbol is provided to Rust in `"C"` format, the symbol is `static` (i.e. unchanged for the life of program) and is a byte (`u8`). In our case we are not interested in the content of that byte, but rather the byte's memory address.
 
 > [!TIP]
 >
@@ -182,37 +189,52 @@ Finally, `__bss = .` assigns the current address to the symbol `__bss`. In C lan
 
 ## Minimal kernel
 
-We're now ready to start writing the kernel. Let's start by creating a minimal one! Create a C language source code file named `kernel.c`:
+We're now ready to start writing the kernel. Let's start by creating a minimal one! Open the Rust language source code file named `src/main.rs`:
 
-```c [kernel.c]
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef uint32_t size_t;
+```rust [src/main.rs]
+fn main() {
+    println!("Hello, world!");
+}
+```
+Clear the example code created by Cargo, and enter the code below.
 
-extern char __bss[], __bss_end[], __stack_top[];
+```rust [src/main.rs]
+//! OS in 1000 lines
 
-void *memset(void *buf, char c, size_t n) {
-    uint8_t *p = (uint8_t *) buf;
-    while (n--)
-        *p++ = c;
-    return buf;
+#![no_std]
+#![no_main]
+
+use core::arch::naked_asm;
+use core::ptr::write_bytes;
+
+// Safety: Linker script creates aligned bss and stack top symbols valid for writing
+unsafe extern "C" {
+    static __bss: u8;
+    static __bss_end: u8;
+    static __stack_top: u8;
 }
 
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+#[unsafe(no_mangle)]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe { write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize); }
 
-    for (;;);
+    loop {}
 }
 
-__attribute__((section(".text.boot")))
-__attribute__((naked))
-void boot(void) {
-    __asm__ __volatile__(
-        "mv sp, %[stack_top]\n" // Set the stack pointer
-        "j kernel_main\n"       // Jump to the kernel main function
-        :
-        : [stack_top] "r" (__stack_top) // Pass the stack top address as %[stack_top]
-    );
+#[unsafe(link_section = ".text.boot")]
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+unsafe extern "C" fn boot() -> ! {
+    naked_asm!(
+        "la a0, {stack_top}",
+        "mv sp, a0",
+        "j {kernel_main}",
+        stack_top = sym __stack_top,
+        kernel_main = sym kernel_main,
+    )
 }
 ```
 
