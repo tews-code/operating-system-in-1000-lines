@@ -107,6 +107,30 @@ $ cargo new kernel && cd kernel
 
 This will create a subfolder `kernel`, as well as configuration files and an example Hello World Rust source file.
 
+> [!TIP]
+>
+> If you are using `rust-analyzer`, you can edit the kernel Cargo.toml file
+> ``` [kernel/Config.toml]
+> [package]
+> name = "kernel"
+> version = "0.1.0"
+> edition = "2024"
+>
+> [lib]
+> test = false
+> doctest = false
+> bench = false
+>
+> [[bin]]
+> name = "kernel"
+> test = false
+> doctest = false
+> bench = false
+>
+> [dependencies]
+> ```
+> to prevent spurious notifications.
+
 
 ## Linker script
 
