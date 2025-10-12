@@ -23,22 +23,54 @@ The following major features are not implemented in this book:
 - **Inter-process communication**: Features such as pipe, UNIX domain socket, and shared memory are not implemented.
 - **Multi-processor support**: Only single processor is supported.
 
-## Source code structure
+## Cargo and source code structure
 
-We'll build from scratch incrementally, and the final file structure will look like this:
+Rust comes with a package manager Cargo, which allows us to structure and control our project. We will use Cargo commands to create, compile and run our code. Cargo should already be installed by `rustup`, and you can check using: 
+
+```bash
+$ cargo --version
+```
+
+We'll build from scratch incrementally, using the Rust package manager Cargo. and the final file structure will look like this:
 
 ```
-├── disk/     - File system contents
-├── common.c  - Kernel/user common library: printf, memset, ...
-├── common.h  - Kernel/user common library: definitions of structs and constants
-├── kernel.c  - Kernel: process management, system calls, device drivers, file system
-├── kernel.h  - Kernel: definitions of structs and constants
-├── kernel.ld - Kernel: linker script (memory layout definition)
-├── shell.c   - Command-line shell
-├── user.c    - User library: functions for system calls
-├── user.h    - User library: definitions of structs and constants
-├── user.ld   - User: linker script (memory layout definition)
-└── run.sh    - Build script
+.
+├── disk/                - File system contents
+├── Cargo.toml           - Cargo workspace configuration
+├── common               - Package for common library
+|   ├── build.rs         - Common: Cargo build script for common package
+│   ├── Cargo.toml       - Common: Cargo package configuration
+│   └── src              - Common: source files
+│       ├── lib.rs       - Common main library
+│       └── print.rs     - Common print module
+├── kernel               - Kernel package
+│   ├── build.rs         - Kernel: Build script for kernel
+│   ├── Cargo.toml       - Kernel: Cargo package configuration
+│   ├── kernel.ld        - Kernel: linker script (memory layout definition)
+│   └── src              - Kernel: source files
+│       ├── address.rs   - Address helper functions
+│       ├── allocator.rs - Heap memory allocator
+│       ├── entry.rs     - Exception and syscall handling
+│       ├── lib.rs       - Kernel: main library
+│       ├── main.rs      - Kernel: main binary
+│       ├── page.rs      - Memory page handling
+│       ├── panic.rs     - Panic handling
+│       ├── policy.rs    - Scheduler policy
+│       ├── process.rs   - Process creation
+│       ├── sbi.rs       - SBI interface
+│       ├── scheduler.rs - Scheduler
+│       ├── tar.rs       - TAR file support
+│       └── virtio.rs    - VirtIO driver
+├── user                 - User (application) package
+|   ├── build.rs         - User: Build script for user applications
+|   ├── Cargo.toml       - User: Cargo package configuration
+|   ├── src              - User: source files
+|   │   ├── bin          - User: Binary source files
+|   │   │   └── shell.rs - Command line shell
+|   │   ├── lib.rs       - User: main library
+|   │   └── syscall.rs   - User library: functions for system calls
+|   └── user.ld          - User: linker script (memory layout definition)
+└── run.sh               - Build script
 ```
 
 > [!TIP]
