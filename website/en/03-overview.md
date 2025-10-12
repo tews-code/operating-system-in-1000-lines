@@ -70,6 +70,8 @@ os1k                     - Root folder and operating system name
 |   │   ├── lib.rs       - User: main library
 |   │   └── syscall.rs   - User library: functions for system calls
 |   └── user.ld          - User: linker script (memory layout definition)
+├── ./cargo              - Workspace config folder
+|   └── config.toml      - Workspace config file
 └── run.sh               - Build script
 ```
 
@@ -77,9 +79,37 @@ os1k                     - Root folder and operating system name
 >
 > In this book, "user land" is sometimes abbreviated as "user". Consider it as "applications", and do not confuse it with "user account"!
 
+## Create the workspace 
+
 In Rust, the folder name of your project matters! Choose a name for your operating system, and create the folder. In this tutorial, we will call our operating system `os1k`, but you can choose anything you like.
 
 ```bash
 $ mkdir os1k && cd os1k
 ```
-Let's get cracking!
+We want to set the target of the entire workspace to be RISC-V 32-bit, so we need to create a configuration TOML file.
+
+```bash
+$ mkdir .cargo
+$ touch .cargo/config.toml
+```
+
+In the configuration file we simply add the target triple:
+
+```toml [.cargo/config.toml]
+[build]
+target="riscv32i-unknown-none-elf"
+```
+Then create a Cargo.toml file to describe our workspace
+
+```bash
+$ touch Cargo.toml
+```
+with just one package in our workspace for now.
+
+```toml [Cargo.toml]
+[workspace]
+members = ["kernel"]
+resolver = "3"
+```
+
+With that done, let's get cracking!
