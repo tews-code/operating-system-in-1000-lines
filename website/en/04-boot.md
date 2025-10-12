@@ -97,6 +97,21 @@ QEMU 8.0.2 monitor - type 'help' for more information
 > C-a C-a  sends C-a
 > ```
 
+## Operating System workspace
+
+
+
+
+## Kernel package
+
+We start creating the kernel package using Cargo.
+
+```bash
+$ cargo new kernel && cd kernel
+```
+
+This will create a subfolder `kernel`, as well as configuration files and an example Hello World Rust source file.
+
 ## Linker script
 
 A linker script is a file which defines the memory layout of executable files. Based on the layout, the linker assigns memory addresses to functions and variables.
