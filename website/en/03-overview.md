@@ -28,7 +28,7 @@ The following major features are not implemented in this book:
 Rust comes with a package manager Cargo, which allows us to structure and control our project. We will use Cargo commands to create, compile and run our code. Cargo should already be installed by `rustup`, and you can check using: 
 
 ```bash
-cargo --version
+$ cargo --version
 ```
 
 We'll build from scratch incrementally, using the Rust package manager Cargo. and the final file structure will look like this:
@@ -80,6 +80,6 @@ os1k                     - Root folder and operating system name
 In Rust, the folder name of your project matters! Choose a name for your operating system, and create the folder. In this tutorial, we will call our operating system `os1k`, but you can choose anything you like.
 
 ```bash
-mkdir os1k && cd os1k
+$ mkdir os1k && cd os1k
 ```
 Let's get cracking!
