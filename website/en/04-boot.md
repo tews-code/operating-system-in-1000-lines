@@ -146,6 +146,8 @@ SECTIONS {
     . = ALIGN(4);
     . += 128 * 1024; /* 128KB */
     __stack_top = .;
+
+   /DISCARD/ : { *(.eh_frame) }
 }
 ```
 Here are the key points of the linker script:
