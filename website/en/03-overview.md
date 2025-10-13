@@ -72,7 +72,8 @@ os1k                     - Root folder and operating system name
 |   └── user.ld          - User: linker script (memory layout definition)
 ├── ./cargo              - Workspace config folder
 |   └── config.toml      - Workspace config file
-└── run.sh               - Build script
+├── build.sh             - Build script
+└── run.sh               - Runner script
 ```
 
 > [!TIP]
@@ -97,7 +98,7 @@ In the configuration file we simply add the target triple:
 
 ```toml [.cargo/config.toml]
 [build]
-target="riscv32i-unknown-none-elf"
+target="riscv32imac-unknown-none-elf"
 ```
 Then create a Cargo.toml file to describe our workspace
 
