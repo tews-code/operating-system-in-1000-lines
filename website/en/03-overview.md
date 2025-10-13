@@ -94,16 +94,27 @@ $ mkdir .cargo
 $ touch .cargo/config.toml
 ```
 
-In the configuration file we simply add the target triple:
+In the configuration file we simply add the build target triple and compiler flags, as well as asking Cargo to execute `run.sh` when we use `cargo run`:
 
 ```toml [.cargo/config.toml]
 [build]
 target="riscv32imac-unknown-none-elf"
 rustflags = ["-g", "-O"]
 
-[target.riscv32i-unknown-none-elf]
+[target.riscv32imac-unknown-none-elf]
 runner = "./run.sh"
 ```
+The specified Cargo compiler options are as follows:
+
+| Option | Description |
+| ------ | ----------- |
+| [build] | Options relating to build |
+| `-O` | Enable optimizations to generate efficient machine code. Equivalent to `-C optlevel=3`. |
+| `-g` | Generate the maximum amount of debug information. Equivalent to `-C debuginfo=2`. |
+| `target = "riscv32imac-unknown-elf"` | Compile for 32-bit RISC-V with IMAC extensions. |
+| `[target.riscv32imac-unknown-none-elf]` | Options specifically for this target. |
+| `runner = "./run.sh"` | Use our run script to run the compiled code in QEMU. |
+
 Then create a Cargo.toml file to describe our workspace
 
 ```bash
