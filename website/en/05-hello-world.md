@@ -12,12 +12,12 @@ In the previous chapter, we learned that SBI is an "API for OS". To call the SBI
 //! SBI Interface
 
 use core::arch::asm;
-use core::ffi::c_long;
+use core::ffi::{c_long, c_int};
 
 const EID_CONSOLE_PUTCHAR: c_long = 1;
 
 // Safety: Caller must ensure that SBI call does not change machine state, memory mappings etc.
-unsafe fn sbi_call(arg0: c_long, eid: c_long) -> Result<isize, isize> {
+unsafe fn sbi_call(arg0: c_int, eid: c_long) -> Result<isize, isize> {
     let result: c_long;
     unsafe {
         asm!(
@@ -36,12 +36,12 @@ unsafe fn sbi_call(arg0: c_long, eid: c_long) -> Result<isize, isize> {
 pub fn put_byte(b: u8) -> Result<isize, isize> {
     // Safety: EID_CONSOLE_PUTCHAR is a safe SBI call that only writes to console
     unsafe {
-        sbi_call(b as c_long, EID_CONSOLE_PUTCHAR)
+        sbi_call(b as c_int, EID_CONSOLE_PUTCHAR)
     }
 }
 ```
 
-Because OpenSBI is has API using C code, we use the Rust module for a Foreign Function Interface, and use the C "long" type. 
+Because OpenSBI is has API using C code, we use the Rust module for a Foreign Function Interface, and use C variable types. In our case, we use `c_int` which is equivalent to Rust's `i32`, and `c_long` which is also equivalent to Rust's `i32`. Since we are using a 32-bit platform, we can cast these as `isize` without concern. 
 
 First we create a constant representing the SBI Extension ID "Console Putchar", which puts a byte on the debug console.
 
@@ -107,19 +107,10 @@ unsafe extern "C" fn boot() -> ! {
 
 We've newly added the `sbi_call` function. This function is designed to call OpenSBI as specified in the SBI specification. The specific calling convention is as follows:
 
-> **Chapter 3. Binary Encoding**
->
-> All SBI functions share a single binary encoding, which facilitates the mixing of SBI extensions. The SBI specification follows the below calling convention.
+> **Chapter 5. Legacy Extensions (EIDs #0x00 - #0x0F)**
 >
 > - An `ECALL` is used as the control transfer instruction between the supervisor and the SEE.
-> - `a7` encodes the SBI extension ID (**EID**),
-> - `a6` encodes the SBI function ID (**FID**) for a given extension ID encoded in `a7` for any SBI extension defined in or after SBI v0.2.
-> - All registers except `a0` & `a1` must be preserved across an SBI call by the callee.
-> - SBI functions must return a pair of values in `a0` and `a1`, with `a0` returning an error code.
-
-However, we are using a legacy extension, which has slightly different rules:
-
-> **Chapter 5. Legacy Extensions (EIDs #0x00 - #0x0F)**
+> - `a7` encodes the SBI extension ID (**EID**).
 >
 > The legacy SBI extensions follow a slightly different calling convention as compared to the SBI v0.2
 > (or higher) specification where:
