@@ -354,7 +354,7 @@ Now, let's try! You will see `Hello World!` and `1 + 2 = 3, 0x1234abcd` as shown
 ```
 $ ./run.sh
 
-Hello World!
+Hello world! 🦀
 1 + 2 = 3, 0x1234abcd
 ```
 
