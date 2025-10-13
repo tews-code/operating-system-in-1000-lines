@@ -6,57 +6,103 @@ In this chapter, let's make it more obvious by outputting a string from the kern
 
 ## Say "hello" to SBI
 
-In the previous chapter, we learned that SBI is an "API for OS". To call the SBI to use its function, we use the `ecall` instruction:
+In the previous chapter, we learned that SBI is an "API for OS". To call the SBI to use its function, we use the `ecall` instruction. Create a new file `kernel/src/sbi.rs`.
 
-```c [kernel.c] {1, 5-26, 29-32}
-#include "kernel.h"
+```rust [kernel/src/sbi.rs]
+//! SBI Interface
 
-extern char __bss[], __bss_end[], __stack_top[];
+use core::arch::asm;
+use core::ffi::c_long;
 
-struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
-                       long arg5, long fid, long eid) {
-    register long a0 __asm__("a0") = arg0;
-    register long a1 __asm__("a1") = arg1;
-    register long a2 __asm__("a2") = arg2;
-    register long a3 __asm__("a3") = arg3;
-    register long a4 __asm__("a4") = arg4;
-    register long a5 __asm__("a5") = arg5;
-    register long a6 __asm__("a6") = fid;
-    register long a7 __asm__("a7") = eid;
+const EID_CONSOLE_PUTCHAR: c_long = 1;
 
-    __asm__ __volatile__("ecall"
-                         : "=r"(a0), "=r"(a1)
-                         : "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5),
-                           "r"(a6), "r"(a7)
-                         : "memory");
-    return (struct sbiret){.error = a0, .value = a1};
-}
-
-void putchar(char ch) {
-    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1 /* Console Putchar */);
-}
-
-void kernel_main(void) {
-    const char *s = "\n\nHello World!\n";
-    for (int i = 0; s[i] != '\0'; i++) {
-        putchar(s[i]);
+// Safety: Caller must ensure that SBI call does not change machine state, memory mappings etc.
+unsafe fn sbi_call(arg0: c_long, eid: c_long) -> Result<isize, isize> {
+    let result: c_long;
+    unsafe {
+        asm!(
+            "ecall",
+            inlateout("a0") arg0 => result,
+            in("a7") eid,
+        );
     }
+    match result {
+        0 => Ok(0),
+        _ => Err(result as isize),
+    }
+}
 
-    for (;;) {
-        __asm__ __volatile__("wfi");
+#[unsafe(no_mangle)]
+pub fn put_byte(b: u8) -> Result<isize, isize> {
+    // Safety: EID_CONSOLE_PUTCHAR is a safe SBI call that only writes to console
+    unsafe {
+        sbi_call(b as c_long, EID_CONSOLE_PUTCHAR)
     }
 }
 ```
 
-Also, create a new `kernel.h` file and define the return value structure:
+Because OpenSBI is has API using C code, we use the Rust module for a Foreign Function Interface, and use the C "long" type. 
 
-```c [kernel.h]
-#pragma once
+First we create a constant representing the SBI Extension ID "Console Putchar", which puts a byte on the debug console.
 
-struct sbiret {
-    long error;
-    long value;
-};
+We then create a function `sbi_call` that uses assembly to make the `ecall` to the SBI. This function looks at the result of the SBI call and transforms this into a Rust `Result<>`. The assembly uses `inlateout` to tell the compiler that register `"a0"` first has a value, and is then clobbered by `result`.
+
+Finally, we create a function to safely make the SBI call. This function is safe, even though the underlying code has an unsafe function call, so we can confidently use this without being concerned about undefined behaviour.
+
+```rust [kernel/src/main.rs] {6, 10, 32-35}
+//! OS in 1000 lines
+
+#![no_std]
+#![no_main]
+
+use core::arch::{asm, naked_asm};
+use core::panic::PanicInfo;
+use core::ptr::write_bytes;
+
+mod sbi;
+
+// Safety: Symbols created by linker script
+unsafe extern "C" {
+    static __bss: u8;
+    static __bss_end: u8;
+    static __stack_top: u8;
+}
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo) -> ! {
+    loop {}
+}
+
+#[unsafe(no_mangle)]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    for b in "\n\nHello World!\n".bytes() {
+      let _ =  sbi::put_byte(b);
+    };
+
+    loop {
+        unsafe{asm!("wfi");}
+    }
+}
+
+#[unsafe(link_section = ".text.boot")]
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+unsafe extern "C" fn boot() -> ! {
+    naked_asm!(
+        "la a0, {stack_top}",
+        "mv sp, a0",
+        "j {kernel_main}",
+        stack_top = sym __stack_top,
+        kernel_main = sym kernel_main,
+    );
+}
 ```
 
 We've newly added the `sbi_call` function. This function is designed to call OpenSBI as specified in the SBI specification. The specific calling convention is as follows:
@@ -69,22 +115,31 @@ We've newly added the `sbi_call` function. This function is designed to call Ope
 > - `a7` encodes the SBI extension ID (**EID**),
 > - `a6` encodes the SBI function ID (**FID**) for a given extension ID encoded in `a7` for any SBI extension defined in or after SBI v0.2.
 > - All registers except `a0` & `a1` must be preserved across an SBI call by the callee.
-> - SBI functions must return a pair of values in `a0` and `a1`, with `a0` returning an error code. This is analogous to returning the C structure
+> - SBI functions must return a pair of values in `a0` and `a1`, with `a0` returning an error code.
+
+However, we are using a legacy extension, which has slightly different rules:
+
+> **Chapter 5. Legacy Extensions (EIDs #0x00 - #0x0F)**
 >
-> ```c
-> struct sbiret {
->     long error;
->     long value;
-> };
-> ```
+> The legacy SBI extensions follow a slightly different calling convention as compared to the SBI v0.2
+> (or higher) specification where:
+> - The SBI function ID field in `a6` register is ignored because these are encoded as multiple SBI extension IDs.
+> - Nothing is returned in `a1` register.
+> - All registers except `a0` must be preserved across an SBI call by the callee.
+> - The value returned in `a0` register is SBI legacy extension specific.
 >
-> -- "RISC-V Supervisor Binary Interface Specification" v2.0-rc1
+> The page and access faults taken by the SBI implementation while accessing memory on behalf of the
+supervisor are redirected back to the supervisor with sepc CSR pointing to the faulting `ECALL`
+instruction.
+> The legacy console SBI functions (`sbi_console_getchar()` and `sbi_console_putchar()`) are expected to be deprecated; they have no replacement.
+>
+> -- "RISC-V Supervisor Binary Interface Specification" Version 1.0.0, March 22, 2022: Ratified
 
 > [!TIP]
 >
-> *"All registers except `a0` & `a1` must be preserved across an SBI call by the callee"* means that the callee (OpenSBI side) must not change the values of ***except*** `a0` and `a1`. In other words, from the kernel's perspective, it is guaranteed that the registers (`a2` to `a7`) will remain the same after the call.
+> *"All registers except `a0` must be preserved across an SBI call by the callee."* means that the callee (OpenSBI side) must not change the values of ***except*** `a0`. In other words, from the kernel's perspective, it is guaranteed that the registers (`a2` to `a7`) will remain the same after the call.
 
-The `register` and `__asm__("register name")` used in each local variable declaration asks the compiler to place values in the specified registers. This is a common idiom in system call invocations (e.g., [Linux system call invocation process](https://git.musl-libc.org/cgit/musl/tree/arch/riscv64/syscall_arch.h)).
+The `in("register name")` in the `asm!` macro used in each local variable declaration asks the compiler to place values in the specified registers. This is a common idiom in system call invocations (e.g., [Linux system call invocation process](https://git.musl-libc.org/cgit/musl/tree/arch/riscv64/syscall_arch.h)).
 
 After preparing the arguments, the `ecall` instruction is executed in inline assembly. When this is called, the CPU's execution mode switches from kernel mode (S-Mode) to OpenSBI mode (M-Mode), and OpenSBI's processing handler is invoked. Once it's done, it switches back to kernel mode, and execution resumes after the `ecall` instruction. 
 
@@ -104,17 +159,19 @@ To display characters, we can use `Console Putchar` function:
 >
 > This SBI call returns 0 upon success or an implementation specific negative error code.
 >
-> -- "RISC-V Supervisor Binary Interface Specification" v2.0-rc1
+> -- "RISC-V Supervisor Binary Interface Specification" v1.0.0
 
 `Console Putchar` is a function that outputs the character passed as an argument to the debug console.
+
 
 ### Try it out
 
 Let's try your implementation. You should see `Hello World!` if it works:
 
 ```
-$ ./run.sh
+$ cargo run
 ...
+
 
 Hello World!
 ```
