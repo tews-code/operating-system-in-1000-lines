@@ -318,63 +318,40 @@ $QEMU -machine virt -bios default -nographic -serial mon:stdio --no-reboot \
     -kernel kernel.elf
 ```
 
-> [TIP!]
->
-> You can check the file path of the Homebrew version of clang on macOS with the following command:
->
-> ```
-> $ ls $(brew --prefix)/opt/llvm/bin/clang
-> /opt/homebrew/opt/llvm/bin/clang
-> ```
-
-The specified clang options (`CFLAGS` variable) are as follows:
-
-| Option | Description |
-| ------ | ----------- |
-| `-std=c11` | Use C11. |
-| `-O2` | Enable optimizations to generate efficient machine code. |
-| `-g3` | Generate the maximum amount of debug information. |
-| `-Wall` | Enable major warnings. |
-| `-Wextra` | Enable additional warnings. |
-| `--target=riscv32-unknown-elf` | Compile for 32-bit RISC-V. |
-| `-ffreestanding` | Do not use the standard library of the host environment (your development environment). |
-| `-fuse-ld=lld` | Use LLVM linker (`ld.lld`). |
-| `-fno-stack-protector` | Disable unnecessary [stack protection](https://wiki.osdev.org/Stack_Smashing_Protector) to avoid unexpected behavior in stack manipulation (see [#31](https://github.com/nuta/operating-system-in-1000-lines/issues/31#issuecomment-2613219393)). |
-| `-nostdlib` | Do not link the standard library. |
-| `-Wl,-Tkernel.ld` | Specify the linker script. |
-| `-Wl,-Map=kernel.map` | Output a map file (linker allocation result). |
-
-`-Wl,` means passing options to the linker instead of the C compiler. `clang` command does C compilation and executes the linker internally.
-
 ## Your first kernel debugging
 
-When you run `run.sh`, the kernel enters an infinite loop. There are no indications that the kernel is running correctly. But don't worry, this is quite common in low-level development! This is where QEMU's debugging features come in.
+Run your kernel using Cargo.
+
+```bash
+$ cargo run
+```
+When you execute `cargo run`, the kernel enters an infinite loop. There are no indications that the kernel is running correctly. But don't worry, this is quite common in low-level development! This is where QEMU's debugging features come in.
 
 To get more information about the CPU registers, open the QEMU monitor and execute the `info registers` command:
 
 ```
-QEMU 8.0.2 monitor - type 'help' for more information
+QEMU 9.2.4 monitor - type 'help' for more information
 (qemu) info registers
 
 CPU#0
  V      =   0
- pc       80200014  ← Address of the instruction to be executed (Program Counter)
+ pc       8020002e  ← Address of the instruction to be executed (Program Counter)
  ...
- x0/zero  00000000 x1/ra    8000a084 x2/sp    80220018 x3/gp    00000000  ← Values of each register
- x4/tp    80033000 x5/t0    00000001 x6/t1    00000002 x7/t2    00000000
- x8/s0    80032f50 x9/s1    00000001 x10/a0   80220018 x11/a1   87e00000
- x12/a2   00000007 x13/a3   00000019 x14/a4   00000000 x15/a5   00000001
+ x0/zero  00000000 x1/ra    8020002e x2/sp    8022008c x3/gp    00000000  ← Values of each register
+ x4/tp    80046000 x5/t0    00000001 x6/t1    00000002 x7/t2    00001000
+ x8/s0    80045f40 x9/s1    00000001 x10/a0   8020009c x11/a1   00000000
+ x12/a2   00000000 x13/a3   8020009c x14/a4   8020009c x15/a5   00000001
  x16/a6   00000001 x17/a7   00000005 x18/s2   80200000 x19/s3   00000000
- x20/s4   87e00000 x21/s5   00000000 x22/s6   80006800 x23/s7   8001c020
- x24/s8   00002000 x25/s9   8002b4e4 x26/s10  00000000 x27/s11  00000000
- x28/t3   616d6569 x29/t4   8001a5a1 x30/t5   000000b4 x31/t6   00000000
+ x20/s4   87e00000 x21/s5   00000000 x22/s6   80006800 x23/s7   00000001
+ x24/s8   00002000 x25/s9   80042308 x26/s10  00000000 x27/s11  00000000
+ x28/t3   80020ad1 x29/t4   80045f40 x30/t5   000000b4 x31/t6   00000000
 ```
 
 > [!TIP]
 >
-> The exact values may differ depending on the versions of clang and QEMU.
+> The exact values may differ depending on the versions of Rust and QEMU.
 
-`pc 80200014` shows the current program counter, the address of the instruction being executed. Let's use the disassembler (`llvm-objdump`) to narrow down the specific line of code:
+`pc 8020002e` shows the current program counter, the address of the instruction being executed. Let's use the disassembler (`llvm-objdump`) to narrow down the specific line of code:
 
 ```
 $ llvm-objdump -d kernel.elf
@@ -384,15 +361,60 @@ kernel.elf:     file format elf32-littleriscv
 Disassembly of section .text:
 
 80200000 <boot>:  ← boot function
-80200000: 37 05 22 80   lui     a0, 524832
-80200004: 13 05 85 01   addi    a0, a0, 24
-80200008: 2a 81         mv      sp, a0
-8020000a: 6f 00 60 00   j       0x80200010 <kernel_main>
-8020000e: 00 00         unimp
+80200000: 00020517      auipc   a0, 0x20
+80200004: 09c50513      addi    a0, a0, 0x9c
+80200008: 812a          mv      sp, a0
+8020000a: 0040006f      j       0x8020000e <kernel_main>
 
-80200010 <kernel_main>:  ← kernel_main function
-80200010: 73 00 50 10   wfi
-80200014: f5 bf         j       0x80200010 <kernel_main>  ← pc is here
+8020000e <kernel_main>:
+8020000e: 1141          addi    sp, sp, -0x10
+80200010: c606          sw      ra, 0xc(sp)
+80200012: 80200537      lui     a0, 0x80200
+80200016: 09c50513      addi    a0, a0, 0x9c
+8020001a: 80200637      lui     a2, 0x80200
+8020001e: 09c60613      addi    a2, a2, 0x9c
+80200022: 8e09          sub     a2, a2, a0
+80200024: 4581          li      a1, 0x0
+80200026: 00000097      auipc   ra, 0x0
+8020002a: 00a080e7      jalr    0xa(ra) <memset>
+8020002e: a001          j       0x8020002e <kernel_main+0x20> ← pc is here
+
+80200030 <memset>:  ← write_bytes "memset" function
+80200030: 46c1          li      a3, 0x10
+80200032: 04d66f63      bltu    a2, a3, 0x80200090 <memset+0x60>
+80200036: 40a006b3      neg     a3, a0
+8020003a: 0036f813      andi    a6, a3, 0x3
+8020003e: 01050733      add     a4, a0, a6
+80200042: 00e57963      bgeu    a0, a4, 0x80200054 <memset+0x24>
+80200046: 87c2          mv      a5, a6
+80200048: 86aa          mv      a3, a0
+8020004a: 00b68023      sb      a1, 0x0(a3)
+8020004e: 17fd          addi    a5, a5, -0x1
+80200050: 0685          addi    a3, a3, 0x1
+80200052: ffe5          bnez    a5, 0x8020004a <memset+0x1a>
+80200054: 41060633      sub     a2, a2, a6
+80200058: ffc67693      andi    a3, a2, -0x4
+8020005c: 96ba          add     a3, a3, a4
+8020005e: 00d77e63      bgeu    a4, a3, 0x8020007a <memset+0x4a>
+80200062: 0ff5f813      andi    a6, a1, 0xff
+80200066: 010107b7      lui     a5, 0x1010
+8020006a: 10178793      addi    a5, a5, 0x101
+8020006e: 02f807b3      mul     a5, a6, a5
+80200072: c31c          sw      a5, 0x0(a4)
+80200074: 0711          addi    a4, a4, 0x4
+80200076: fed76ee3      bltu    a4, a3, 0x80200072 <memset+0x42>
+8020007a: 8a0d          andi    a2, a2, 0x3
+8020007c: 00c68733      add     a4, a3, a2
+80200080: 00e6f763      bgeu    a3, a4, 0x8020008e <memset+0x5e>
+80200084: 00b68023      sb      a1, 0x0(a3)
+80200088: 167d          addi    a2, a2, -0x1
+8020008a: 0685          addi    a3, a3, 0x1
+8020008c: fe65          bnez    a2, 0x80200084 <memset+0x54>
+8020008e: 8082          ret
+80200090: 86aa          mv      a3, a0
+80200092: 00c50733      add     a4, a0, a2
+80200096: fee567e3      bltu    a0, a4, 0x80200084 <memset+0x54>
+8020009a: bfd5          j       0x8020008e <memset+0x5e>
 ```
 
 Each line corresponds to an instruction. Each column represents:
@@ -401,32 +423,61 @@ Each line corresponds to an instruction. Each column represents:
 - Hexadecimal dump of the machine code.
 - Disassembled instructions.
 
-`pc 80200014` means the currently executed instruction is `j 0x80200010`. This confirms that QEMU has correctly reached the `kernel_main` function.
+`pc 8020002e` means the currently executed instruction is `j       0x8020002e <kernel_main+0x20>`. This confirms that QEMU has correctly reached the `kernel_main` function.
+
+Our call to `core::ptr::write_bytes` has been translated by the compiler to `memset`. Rust uses LLVM, which in turn has some "intrinsic" functions to cover common functions [Crate core](https://doc.rust-lang.org/core/index.html). 
+
+> [TIP!]
+> We need to be careful about not reusing intrinsic's names in our function names. Creating a function called `memset` can confuse the compiler and create a recursive loop. 
 
 Let's also check if the stack pointer (sp register) is set to the value of `__stack_top` defined in the linker script. The register dump shows `x2/sp 80220018`. To see where the linker placed `__stack_top`, check `kernel.map` file:
 
 ```
      VMA      LMA     Size Align Out     In      Symbol
        0        0 80200000     1 . = 0x80200000
-80200000 80200000       16     4 .text
+80200000 80200000       9c     4 .text
 ...
-80200016 80200016        2     1 . = ALIGN ( 4 )
-80200018 80200018    20000     1 . += 128 * 1024
-80220018 80220018        0     1 __stack_top = .
+80200000 80200000        e     1                 boot
+...
+8020000e 8020000e       22     1                 kernel_main
+...
+80200030 80200030       6c     1                 memset
+...
+8020009c 8020009c        0     4 .bss
+8020009c 8020009c        0     1         __bss = .
+8020009c 8020009c        0     1         __bss_end = .
+8020009c 8020009c        0     1 . = ALIGN(4)
+8020009c 8020009c    20000     1 . += 128 * 1024
+8022009c 8022009c        0     1 __stack_top = .
 ```
+
+`stack_top` starts at `8022009c`. If we look at the assembly our kernel starts with 
+```
+80200000 <boot>:  ← pc starts here
+80200000: 00020517      auipc   a0, 0x20
+80200004: 09c50513      addi    a0, a0, 0x9c
+80200008: 812a          mv      sp, a0
+```
+The compiler has used `auipc` to _add_ _u_pper _i_mmediate to `_pc_`'s current value (which is `80200000`), giving us `0x80200000 + 0x20 << 12`. Then it uses `addi` to _add_ _i_mmediate `0x9c` to arrive at the stack top value `8022009c`. 
+At the start of `kernel_main`, `-0x10` is added to `sp`, leaving us `8022008c` which is what we saw in the register!
 
 Alternatively, you can also check the addresses of functions/variables using `llvm-nm`:
 
 ```
 $ llvm-nm kernel.elf
-80200010 t .LBB0_1
 00000000 N .Lline_table_start0
-80220018 T __stack_top
+000000e3 N .Lline_table_start0
+0000030e N .Lline_table_start1
+80200000 t .Lpcrel_hi0
+8020009c B __bss
+8020009c B __bss_end
+8022009c B __stack_top
 80200000 T boot
-80200010 T kernel_main
+8020000e T kernel_main
+80200030 t memset
 ```
 
-The first column is the address where they are placed (VMA). You can see that `__stack_top` is placed at `0x80220018`. This confirms that the stack pointer is correctly set in the `boot` function. Nice!
+The first column is the address where they are placed (VMA). You can see that `__stack_top` is placed at `8022009c`. This confirms that the stack pointer is correctly set in the `boot` function. Nice!
 
 As execution progresses, the results of `info registers` will change. If you want to temporarily stop the emulation, you can use the `stop` command in the QEMU monitor:
 
