@@ -211,101 +211,115 @@ Open `common/src/lib.rs`, clear the example code and replace it with:
 
 pub mod print;
 ```
+> [TIP!]
+> As before, if you want to avoid spurious `rust-analyzer` warnings, you can add
+> ```toml [common/Cargo.toml]
+> [lib]
+> test = false
+> doctest = false
+> bench = false
+> ```
+> to the `common` package `Cargo.toml`.
 
 All we are doing here is creating an new *public* module called `print`. Cargo expects the contents of that module to be in a file called `print.rs`, so let's create `common/src/print.rs` as an empty file now.
 
-Here's the implementation of the `printf` function:
+Here's the implementation of the `println!` macro:
 
-```c [common.c]
-#include "common.h"
+```rust [common/src/print.rs]
+//! Print to debug console
 
-void putchar(char ch);
+use core::fmt;
 
-void printf(const char *fmt, ...) {
-    va_list vargs;
-    va_start(vargs, fmt);
+pub struct DebugConsole;
 
-    while (*fmt) {
-        if (*fmt == '%') {
-            fmt++; // Skip '%'
-            switch (*fmt) { // Read the next character
-                case '\0': // '%' at the end of the format string
-                    putchar('%');
-                    goto end;
-                case '%': // Print '%'
-                    putchar('%');
-                    break;
-                case 's': { // Print a NULL-terminated string.
-                    const char *s = va_arg(vargs, const char *);
-                    while (*s) {
-                        putchar(*s);
-                        s++;
-                    }
-                    break;
-                }
-                case 'd': { // Print an integer in decimal.
-                    int value = va_arg(vargs, int);
-                    unsigned magnitude = value; // https://github.com/nuta/operating-system-in-1000-lines/issues/64
-                    if (value < 0) {
-                        putchar('-');
-                        magnitude = -magnitude;
-                    }
+unsafe extern "Rust" {
+    pub fn put_byte(b: u8) -> Result<isize, isize>;
+}
 
-                    unsigned divisor = 1;
-                    while (magnitude / divisor > 9)
-                        divisor *= 10;
-
-                    while (divisor > 0) {
-                        putchar('0' + magnitude / divisor);
-                        magnitude %= divisor;
-                        divisor /= 10;
-                    }
-
-                    break;
-                }
-                case 'x': { // Print an integer in hexadecimal.
-                    unsigned value = va_arg(vargs, unsigned);
-                    for (int i = 7; i >= 0; i--) {
-                        unsigned nibble = (value >> (i * 4)) & 0xf;
-                        putchar("0123456789abcdef"[nibble]);
-                    }
-                }
-            }
-        } else {
-            putchar(*fmt);
+impl fmt::Write for DebugConsole {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for b in s.bytes() {
+            unsafe { put_byte(b).map_err(|_| fmt::Error)?; }
         }
-
-        fmt++;
+        Ok(())
     }
+}
 
-end:
-    va_end(vargs);
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {
+        {
+            use core::fmt::Write;
+            let _ = write!($crate::print::DebugConsole, $($arg)*);
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! println {
+    () => { $crate::print!("\n") }; // Allows us to use println!() to print a newline.
+    ($($arg:tt)*) => {
+        {
+            use core::fmt::Write;
+            let _ = writeln!($crate::print::DebugConsole, $($arg)*);
+        }
+    };
 }
 ```
 
-It's surprisingly concise, isn't it? It goes through the format string character by character, and if we encounter a `%`, we look at the next character and perform the corresponding formatting operation. Characters other than `%` are printed as is.
+C programming supports functions with variable numbers of arguments ("variadics"), but in Rust we need to use macros to achieve the same thing. We need this for printing so that we can print strings with different numbers of substitutions, like `println!("This is just a string literal.");` and `println!("{} + {} = {}", 1, 2, 3);`. Fortunately we can simply wrap the provided `write!` macros in our own `print!` and `println!` macros, meaning most of the work is already done for us.
 
-For decimal numbers, if `value` is negative, we first output a `-` and then get its absolute value. We then calculate the divisor to get the most significant digit and output the digits one by one. We use `unsigned` for `magnitude` to handle `INT_MIN` case. See [this issue](https://github.com/nuta/operating-system-in-1000-lines/issues/64) for more details.
+Firstly we let the compiler know that the `put_byte` function will be provided by an external package, and share the expected signature.
 
-For hexadecimal numbers, we output from the most significant *nibble* (a hexadecimal digit, 4 bits) to the least significant. Here, `nibble` is an integer from 0 to 15, so we use it as the index in string `"0123456789abcdef"` to get the corresponding character.
+We then declare zero-sized sttuct `pub struct DebugConsole`, and then we attach the `core::fmt::Write` trait to our struct. The Write trait has one mandatory function that we need to provide called `write_str`, and once that is in place it will provide the `write!` and `writeln!` macros.
 
-`va_list` and related macros are defined in the C standard library's `<stdarg.h>`. In this book, we use compiler builtins directly without relying on the standard library. Specifically, we'll define them in `common.h` as follows:
+The `write_str` function needs to take a string and print it out - just what our `put_byte` function can do! It must return a `core::fmt::Result`, which is defined as `Result<(), core::fmt::Error>, so we map any errors (`|_|`) from our `put_byte` call to `core::fmt::Error` instead, or pass an empty `Ok(())` on success. 
 
-```c [common.h]
-#pragma once
+Rust macros are similar to `match` statements - if the rule on the left matches, then the expansion on the right is used. Here you can see we are allowing for repetitions with `*` - meaning zero or more repetitions - around a variable `$arg` which is a *metavariable* of type *token tree* (`tt`). A token tree can match almost anything, including our variable number of arguments.
 
-#define va_list  __builtin_va_list
-#define va_start __builtin_va_start
-#define va_end   __builtin_va_end
-#define va_arg   __builtin_va_arg
+Once we match the token tree on the left, we expand the expression on the right. Here we are simply calling the `write!` or `writeln!` macros from the Write trait, passing on our `$arg` repetitions.
 
-void printf(const char *fmt, ...);
+On error our `print!` and `println!` macros will simply panic thanks to `unwrap()`, as at this point there is little else we can do.
+
+We use the `#[macro_export]` attribute to export the macros to the root crate (the root of our kernel module), so they can be used throughout the kernel.
+
+Now we've implemented the `println!` macro. Let's add a "Hello World" from the kernel:
+
+```rust [kernel/main.rs] {10-11, 26-27}
+//! OS in 1000 lines
+
+#![no_std]
+#![no_main]
+
+use core::arch::{asm, naked_asm};
+use core::panic::PanicInfo;
+use core::ptr::write_bytes;
+
+#[allow(unused_imports)]
+use common::{print, println};
+
+mod sbi;
+
+...
+
+#[unsafe(no_mangle)]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    println!("Hello world! 🦀");
+    println!("1 + 2 = {}, 0x{:x}", 1 + 2, 0x1234abcd);
+
+    loop {
+        unsafe{asm!("wfi");}
+    }
+}
+...
 ```
-
-We're simply defining these as aliases for the versions with `__builtin_` prefixed. They are builtin features provided by the compiler (clang) itself ([Reference: clang documentation](https://clang.llvm.org/docs/LanguageExtensions.html#variadic-function-builtins)). The compiler will handle the rest appropriately, so we don't need to worry about it.
-
-Now we've implemented `printf`. Let's add a "Hello World" from the kernel:
-
 ```c [kernel.c] {2,5-6}
 #include "kernel.h"
 #include "common.h"
