@@ -120,7 +120,7 @@ Then create a Cargo.toml file to describe our workspace
 ```bash
 $ touch Cargo.toml
 ```
-with just one package in our workspace for now.
+with just one member package in our workspace for now.
 
 ```toml [Cargo.toml]
 [workspace]
