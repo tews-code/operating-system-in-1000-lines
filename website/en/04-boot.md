@@ -208,7 +208,7 @@ Here we use `unsafe` to mark that the Rust compiler is relying on our linker scr
 
 ## Build script
 
-We can tell Rust to use the linker script in a number of ways. We will use a Rust build script, which uses Rust code to guide the build process. Using a build script will give us flexibility later in this tutorial.
+We can tell Rust to use the linker script in a number of ways. In this case we will use a Rust build script, which uses Rust code to guide the build process. Using a build script will give us flexibility later in this tutorial.
 
 ```rust [kernel/build.rs]
 fn main() {
