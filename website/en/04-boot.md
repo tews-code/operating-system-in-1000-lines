@@ -116,11 +116,6 @@ This will create a subfolder `kernel`, as well as configuration files and an exa
 > version = "0.1.0"
 > edition = "2024"
 >
-> [lib]
-> test = false
-> doctest = false
-> bench = false
->
 > [[bin]]
 > name = "kernel"
 > test = false
@@ -256,8 +251,8 @@ fn kernel_main() -> ! {
     loop {}
 }
 
-#[unsafe(link_section = ".text.boot")]
 #[unsafe(no_mangle)]
+#[unsafe(link_section = ".text.boot")]
 #[unsafe(naked)]
 unsafe extern "C" fn boot() -> ! {
     naked_asm!(
@@ -274,25 +269,34 @@ Let's explore the key points one by one:
 
 ### The kernel entry point
 
-The execution of the kernel starts from the `boot` function, which is specified as the entry point in the linker script. It has two compiler directives - one to link this function to the `.text.boot` segment, and the other to mark the function as `naked` to avoid compiler optimisations. This function contains only assembly code, and we use the `naked_asm!` macro to prevent any compiler optimisations. Stable Rust only supports `naked_asm!` in functions that are made external using `"C"` calling convension, and because the compiler has no control over memory ownership, this function is `unsafe`. This function does not return, so we set the return type to ` -> !`. 
+The execution of the kernel starts from the `boot` function, which is specified as the entry point in the linker script.
 
 In this function, the stack pointer (`sp`) is set to the end address of the stack area defined in the linker script. Then, it jumps to the `kernel_main` function. It's important to note that the stack grows towards zero, meaning it is decremented as it is used. Therefore, the end address (not the start address) of the stack area must be set.
 
 ### `boot` function attributes
 
-The `boot` function has two special attributes. The `__attribute__((naked))` attribute instructs the compiler not to generate unnecessary code before and after the function body, such as a return instruction. This ensures that the inline assembly code is the exact function body.
+The `boot` function has three special attributes. The `naked` attribute instructs the compiler not to generate unnecessary code before and after the function body, such as a return instruction. This ensures that the inline assembly code is the exact function body.
 
-The `boot` function also has the `__attribute__((section(".text.boot")))` attribute, which controls the placement of the function in the linker script. Since OpenSBI simply jumps to `0x80200000` without knowing the entry point, the `boot` function needs to be placed at `0x80200000`.
+The `boot` function also has the `link_section = ".text.boot"` attribute, which controls the placement of the function in the linker script. Since OpenSBI simply jumps to `0x80200000` without knowing the entry point, the `boot` function needs to be placed at `0x80200000`.
 
-### `extern char` to get linker script symbols
+The `no_mangle` attribute stops the compiler from "mangling" the function name, so it just stays as `boot`. (This is not strictly necessary).
 
-At the beginning of the file, each symbol defined in the linker script is declared using `extern char`. Here, we are only interested in obtaining the addresses of the symbols, so using `char` type is not that important.
+### `extern "C"` to get linker script symbols
 
-We can also declare it as `extern char __bss;`, but `__bss` alone means *"the value at the 0th byte of the `.bss` section"* instead of *"the start address of the `.bss` section"*. Therefore, it is recommended to add `[]` to ensure that `__bss` returns an address and prevent any careless mistakes.
+At the beginning of the file, each symbol defined in the linker script is declared using `extern "C"`. Here, we are only interested in obtaining the addresses of the symbols, so using `u8` type is not that important.
+
+To get the address we use `&raw const`. This gives us the symbol's address without reading the byte (which at this point would be Undefined Behaviour.
+
+> [TIP!]
+> Writing safe Rust code allows us to avoid undefined behavour. However, as we are working on an operating system we are going to work with unsafe code, and we will need to take responsibility to avoid undefined behaviour ourselves.
 
 ### `.bss` section initialization
 
-In the `kernel_main` function, the `.bss` section is first initialized to zero using the `memset` function. Although some bootloaders may recognize and zero-clear the `.bss` section, but we initialize it manually just in case. Finally, the function enters an infinite loop and the kernel terminates.
+In the `kernel_main` function, the `.bss` section is first initialized to zero using the `writebytes` function. Although some bootloaders may recognize and zero-clear the `.bss` section, but we initialize it manually just in case. Finally, the function enters an infinite loop and the kernel terminates.
+
+### The panic handler
+
+Rust requires a panic handler function to take care of any situation causing a panic. Usually this is provided by the standard library, but in our case we need to create it ourselves. For now we create a placeholder function which just loops, and give it the attribute `#[panic_handler]` so that Rust can use it for panics. Once we have the ability to print we will extend the function to provide useful messages. (We put an underscore in front of the variable name to prevent Rust complaining about an unused variable).
 
 ## Let's run!
 
