@@ -206,6 +206,23 @@ Here we use `unsafe` to mark that the Rust compiler is relying on our linker scr
 >
 > Linker scripts offer many convenient features, especially for kernel development. You can find real-world examples on GitHub!
 
+## Build script
+
+We can tell Rust to use the linker script in a number of ways. We will use a Rust build script, which uses Rust code to guide the build process. Using a build script will give us flexibility later in this tutorial.
+
+```rust [kernel/build.rs]
+fn main() {
+    // Add rustc linker arguments
+    println!("cargo:rustc-link-arg=--script=kernel/kernel.ld");
+    println!("cargo:rustc-link-arg=--Map=kernel/kernel.map");
+
+
+    // Tell cargo to rerun if the linker script changes
+    println!("cargo:rerun-if-changed=kernel.ld");
+}
+```
+
+Rust build scripts use `println!()` macros to print commands for Cargo to follow. In this case, we print the linker arguments to ask the linker to use the `kernel.ld` linker script, and to output it's results in a `kernel.map` map file. We also tell Cargo to re-run if the linker script is changed (avoiding having to remember to use `cargo clean` each time we change the linker script.
 
 ## Minimal kernel
 
