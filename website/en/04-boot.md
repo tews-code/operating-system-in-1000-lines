@@ -458,8 +458,7 @@ Let's also check if the stack pointer (sp register) is set to the value of `__st
 80200004: 09c50513      addi    a0, a0, 0x9c
 80200008: 812a          mv      sp, a0
 ```
-The compiler has used `auipc` to _add_ _u_pper _i_mmediate to `_pc_`'s current value (which is `80200000`), giving us `0x80200000 + 0x20 << 12`. Then it uses `addi` to _add_ _i_mmediate `0x9c` to arrive at the stack top value `8022009c`. 
-At the start of `kernel_main`, `-0x10` is added to `sp`, leaving us `8022008c` which is what we saw in the register!
+The compiler has used `auipc` to add upper immediate to `_pc_`'s current value (which is `80200000`), giving us `0x80200000 + 0x20 << 12`. Then it uses `addi` to add immediate `0x9c` to arrive at the stack top value `8022009c`. At the start of `kernel_main`, `-0x10` is added to `sp`, leaving us `8022008c` which is what we saw in the register!
 
 Alternatively, you can also check the addresses of functions/variables using `llvm-nm`:
 
