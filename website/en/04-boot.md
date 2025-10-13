@@ -109,7 +109,8 @@ This will create a subfolder `kernel`, as well as configuration files and an exa
 
 > [!TIP]
 >
-> If you are using `rust-analyzer`, you can edit the kernel Cargo.toml file
+> If you are using `rust-analyzer`, you can edit the kernel Cargo.toml file to prevent spurious notifications, as
+> we can't use "test", "doctest" or "bench" in our `no_std` environment.
 > ``` [kernel/Config.toml]
 > [package]
 > name = "kernel"
@@ -124,7 +125,7 @@ This will create a subfolder `kernel`, as well as configuration files and an exa
 >
 > [dependencies]
 > ```
-> to prevent spurious notifications.
+> 
 
 
 ## Linker script
