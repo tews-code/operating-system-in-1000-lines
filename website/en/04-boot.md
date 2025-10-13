@@ -177,7 +177,7 @@ Here are the key points of the linker script:
 - The `.text.boot` section is always placed at the beginning.
 - Each section is placed in the order of `.text`, `.rodata`, `.data`, and `.bss`.
 - The kernel stack comes after the `.bss` section, and its size is 128KB.
-- Finally, we ask the linker to discard any `.eh_frame` using the `/DISCARD/` command, as this is only needed for stack unwinding, which we will not use.
+- Finally, we ask the linker to discard any `.eh_frame` using the `/DISCARD/` command, as this is only needed for stack unwinding, which we will not use. Rust creates this section automatically, and the linker script will put it at the beginning of our program (exactly where we want our boot text!) unless we say what to do.
 
 `.text`, `.rodata`, `.data`, and `.bss` sections mentioned here are data areas with specific roles:
 
@@ -204,7 +204,7 @@ unsafe extern "C" {
 }
 ```
 
-Here we use `unsafe` to mark that the Rust compiler is relying on our linker script to provide a valid symbol, it is `extern` to the Rust source files, the symbol is provided to Rust in `"C"` format, the symbol is `static` (i.e. unchanged for the life of program) and is a byte (`u8`). In our case we are not interested in the content of that byte, but rather the byte's memory address.
+Here we use `unsafe` to mark that the Rust compiler is relying on our linker script to provide a valid symbol, it is `extern` to the Rust source files, the symbol is provided to Rust in `"C"` format, the symbol is `static` (i.e. unchanged for the life of program) and is an unsigned byte (`u8`). In our case we are not interested in the content of that byte, but rather the byte's memory address.
 
 > [!TIP]
 >
@@ -229,21 +229,29 @@ Clear the example code created by Cargo, and enter the code below.
 #![no_main]
 
 use core::arch::naked_asm;
+use core::panic::PanicInfo;
 use core::ptr::write_bytes;
 
-// Safety: Linker script creates aligned bss and stack top symbols valid for writing
+// Safety: Symbols created by linker script
 unsafe extern "C" {
     static __bss: u8;
     static __bss_end: u8;
     static __stack_top: u8;
 }
 
+#[panic_handler]
+fn panic(_panic: &PanicInfo) -> ! {
+    loop {}
+}
+
 #[unsafe(no_mangle)]
 fn kernel_main() -> ! {
     let bss = &raw const __bss;
     let bss_end = &raw const __bss_end;
-    // Safety: bss is aligned and bss segment is valid for writes up to bss_end
-    unsafe { write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize); }
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
 
     loop {}
 }
@@ -266,7 +274,9 @@ Let's explore the key points one by one:
 
 ### The kernel entry point
 
-The execution of the kernel starts from the `boot` function, which is specified as the entry point in the linker script. In this function, the stack pointer (`sp`) is set to the end address of the stack area defined in the linker script. Then, it jumps to the `kernel_main` function. It's important to note that the stack grows towards zero, meaning it is decremented as it is used. Therefore, the end address (not the start address) of the stack area must be set.
+The execution of the kernel starts from the `boot` function, which is specified as the entry point in the linker script. It has two compiler directives - one to link this function to the `.text.boot` segment, and the other to mark the function as `naked` to avoid compiler optimisations. This function contains only assembly code, and we use the `naked_asm!` macro to prevent any compiler optimisations. Stable Rust only supports `naked_asm!` in functions that are made external using `"C"` calling convension, and because the compiler has no control over memory ownership, this function is `unsafe`. This function does not return, so we set the return type to ` -> !`. 
+
+In this function, the stack pointer (`sp`) is set to the end address of the stack area defined in the linker script. Then, it jumps to the `kernel_main` function. It's important to note that the stack grows towards zero, meaning it is decremented as it is used. Therefore, the end address (not the start address) of the stack area must be set.
 
 ### `boot` function attributes
 
