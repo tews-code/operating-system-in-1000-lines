@@ -281,42 +281,38 @@ The `boot` function also has the `link_section = ".text.boot"` attribute, which 
 
 The `no_mangle` attribute stops the compiler from "mangling" the function name, so it just stays as `boot`. (This is not strictly necessary).
 
-### `extern "C"` to get linker script symbols
+### Getting linker script symbols
 
-At the beginning of the file, each symbol defined in the linker script is declared using `extern "C"`. Here, we are only interested in obtaining the addresses of the symbols, so using `u8` type is not that important.
+At the beginning of the file, each symbol defined in the linker script is declared in an `extern "C"` block as a `static: symbol_name: u8;`. Here, we are only interested in obtaining the addresses of the symbols, so using `u8` type is not that important.
 
-To get the address we use `&raw const`. This gives us the symbol's address without reading the byte (which at this point would be Undefined Behaviour.
+To get the address we use `&raw const`. This gives us the symbol's address without reading the byte (which at this point would be Undefined Behaviour).
 
 > [TIP!]
 > Writing safe Rust code allows us to avoid undefined behavour. However, as we are working on an operating system we are going to work with unsafe code, and we will need to take responsibility to avoid undefined behaviour ourselves.
 
 ### `.bss` section initialization
 
-In the `kernel_main` function, the `.bss` section is first initialized to zero using the `writebytes` function. Although some bootloaders may recognize and zero-clear the `.bss` section, but we initialize it manually just in case. Finally, the function enters an infinite loop and the kernel terminates.
+In the `kernel_main` function, the `.bss` section is first initialized to zero using the `write_bytes` function. Although some bootloaders may recognize and zero-clear the `.bss` section, but we initialize it manually just in case. Finally, the function enters an infinite loop and the kernel terminates.
 
 ### The panic handler
 
-Rust requires a panic handler function to take care of any situation causing a panic. Usually this is provided by the standard library, but in our case we need to create it ourselves. For now we create a placeholder function which just loops, and give it the attribute `#[panic_handler]` so that Rust can use it for panics. Once we have the ability to print we will extend the function to provide useful messages. (We put an underscore in front of the variable name to prevent Rust complaining about an unused variable).
+Rust requires a panic handler function to take care of any situation causing a panic. Usually this is provided by the standard library, but in our case we need to create it ourselves. For now we create a placeholder function which just loops, and give it the attribute `#[panic_handler]` so that Rust can use it for panics. Once we have the ability to print we will extend the function to provide useful messages. We put an underscore in front of the variable name to prevent Rust complaining about an unused variable.
 
 ## Let's run!
 
 Add a kernel build command and a new QEMU option (`-kernel kernel.elf`) to `run.sh`:
 
-```bash [run.sh] {6-12,16}
+```bash [run.sh] {6-8,12}
 #!/bin/bash
 set -xue
 
+#QEMU file path
 QEMU=qemu-system-riscv32
 
-# Path to clang and compiler flags
-CC=/opt/homebrew/opt/llvm/bin/clang  # Ubuntu users: use CC=clang
-CFLAGS="-std=c11 -O2 -g3 -Wall -Wextra --target=riscv32-unknown-elf -fuse-ld=lld -fno-stack-protector -ffreestanding -nostdlib"
+#Cargo will provide a path to the built kernel in $1
+cp $1 kernel.elf
 
-# Build the kernel
-$CC $CFLAGS -Wl,-Tkernel.ld -Wl,-Map=kernel.map -o kernel.elf \
-    kernel.c
-
-# Start QEMU
+#Start QEMU
 $QEMU -machine virt -bios default -nographic -serial mon:stdio --no-reboot \
     -kernel kernel.elf
 ```
