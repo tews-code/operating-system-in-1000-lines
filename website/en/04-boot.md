@@ -317,7 +317,7 @@ $QEMU -machine virt -bios default -nographic -serial mon:stdio --no-reboot \
     -kernel kernel.elf
 ```
 
-> [!TIP]
+> [TIP!]
 >
 > You can check the file path of the Homebrew version of clang on macOS with the following command:
 >
