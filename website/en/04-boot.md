@@ -423,11 +423,11 @@ Each line corresponds to an instruction. Each column represents:
 - Hexadecimal dump of the machine code.
 - Disassembled instructions.
 
-`pc 8020002e` means the currently executed instruction is `j       0x8020002e <kernel_main+0x20>`. This confirms that QEMU has correctly reached the `kernel_main` function.
+`pc 8020002e` means the currently executed instruction is `j 0x8020002e <kernel_main+0x20>`. This confirms that QEMU has correctly reached the `kernel_main` function.
 
-Our call to `core::ptr::write_bytes` has been translated by the compiler to `memset`. Rust uses LLVM, which in turn has some "intrinsic" functions to cover common functions [Crate core](https://doc.rust-lang.org/core/index.html). 
+Our call to `core::ptr::write_bytes` has been translated by the compiler to `memset`. Rust uses LLVM, which in turn has some "intrinsic" functions to cover common functions, which you can see at [Crate core](https://doc.rust-lang.org/core/index.html). 
 
-> [TIP!]
+> [!TIP]
 > We need to be careful about not reusing intrinsic's names in our function names. Creating a function called `memset` can confuse the compiler and create a recursive loop. 
 
 Let's also check if the stack pointer (sp register) is set to the value of `__stack_top` defined in the linker script. The register dump shows `x2/sp 80220018`. To see where the linker placed `__stack_top`, check `kernel.map` file:
@@ -457,8 +457,11 @@ Let's also check if the stack pointer (sp register) is set to the value of `__st
 80200000: 00020517      auipc   a0, 0x20
 80200004: 09c50513      addi    a0, a0, 0x9c
 80200008: 812a          mv      sp, a0
+...
+8020000e <kernel_main>:
+8020000e: 1141          addi    sp, sp, -0x10
 ```
-The compiler has used `auipc` to add upper immediate to `_pc_`'s current value (which is `80200000`), giving us `0x80200000 + 0x20 << 12`. Then it uses `addi` to add immediate `0x9c` to arrive at the stack top value `8022009c`. At the start of `kernel_main`, `-0x10` is added to `sp`, leaving us `8022008c` which is what we saw in the register!
+The compiler has used `auipc` to add upper immediate to `pc`'s current value (which is `80200000`), giving us `0x80200000 + (0x20 << 12)`. Then it uses `addi` to add immediate `0x9c` to arrive at the stack top value `8022009c`. At the start of `kernel_main`, `-0x10` is added to `sp`, leaving us `8022008c` which is what we saw in the register!
 
 Alternatively, you can also check the addresses of functions/variables using `llvm-nm`:
 
