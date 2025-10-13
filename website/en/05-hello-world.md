@@ -91,8 +91,8 @@ fn kernel_main() -> ! {
     }
 }
 
-#[unsafe(link_section = ".text.boot")]
 #[unsafe(no_mangle)]
+#[unsafe(link_section = ".text.boot")]
 #[unsafe(naked)]
 unsafe extern "C" fn boot() -> ! {
     naked_asm!(
@@ -182,15 +182,37 @@ Hello World!
 >
 > That is, by calling `Console Putchar` function is not a magic at all - it just uses the device driver implemented in OpenSBI!
 
-## `printf` function
+## `println!` macro
 
-We've successfully printed some characters. The next item is implementing `printf` function.
+We've successfully printed some characters. The next item is implementing `println!` macro.
 
-`printf` function takes a format string, and the values to be embedded in the output. For example, `printf("1 + 2 = %d", 1 + 2)` will display `1 + 2 = 3`.
+`println!` macro takes a format string, and the values to be embedded in the output. For example, `println!("1 + 2 = {}", 1 + 2)` will display `1 + 2 = 3`.
 
-While `printf` bundled in the C standard library has a very rich set of features, let's start with a minimal version. Specifically, we'll implement a `printf` that supports three format specifiers: `%d` (decimal), `%x` (hexadecimal), and `%s` (string).
+While `println!` bundled in the Rust standard library, it is not provided in the `core` Rust library, so we will need to implement this. Specifically, we'll implement a `println!` and a "print!" which does not add a new line character.
 
-Since we'll use `printf` in applications too, let's create a new file `common.c` for code shared between the kernel and userland.
+Since we'll use `println!` in applications too, let's create a new package `common` for code shared between the kernel and userland.
+
+## `common` package
+
+Let's go to our project root folder, and use Cargo to create a new library package.
+
+```bash
+$ cd ..
+$ cargo new --lib common
+```
+Cargo will create the new package and populate an example library source file, as well as automatically adding it as a member of our workspace.
+
+Open `common/src/lib.rs`, clear the example code and replace it with:
+
+```rust [common/src/lib.rs]
+//! Common library
+
+#![no_std]
+
+pub mod print;
+```
+
+All we are doing here is creating an new *public* module called `print`. Cargo expects the contents of that module to be in a file called `print.rs`, so let's create `common/src/print.rs` as an empty file now.
 
 Here's the implementation of the `printf` function:
 
