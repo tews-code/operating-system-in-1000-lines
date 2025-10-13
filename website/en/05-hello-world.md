@@ -202,7 +202,36 @@ $ cargo new --lib common
 ```
 Cargo will create the new package and populate an example library source file, as well as automatically adding it as a member of our workspace.
 
-Open `common/src/lib.rs`, clear the example code and replace it with:
+Let's add a workspace-wide dependency on the common package, by adding this to `Cargo.toml` at the project root folder:
+
+```toml [Cargo.toml] {2, 5-6}
+[workspace]
+members = ["common","kernel"]
+resolver = "3"
+
+[workspace.dependencies]
+common = { path = "common" }
+```
+
+Now include this dependency in our kernel package's `Cargo.toml`.
+
+```toml [kernel/Cargo.toml] {12-13}
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "kernel"
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+common = { workspace = true }
+```
+
+Now let's start working on the common library. Open `common/src/lib.rs`, clear the example code and replace it with:
 
 ```rust [common/src/lib.rs]
 //! Common library
