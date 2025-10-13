@@ -279,7 +279,7 @@ Rust macros are similar to `match` statements - if the rule on the left matches,
 
 Once we match the token tree on the left, we expand the expression on the right. Here we are simply calling the `write!` or `writeln!` macros from the Write trait, passing on our `$arg` repetitions.
 
-On error our `print!` and `println!` macros will simply panic thanks to `unwrap()`, as at this point there is little else we can do.
+We simply ignore errors on `write!` using `let _ = `, as at this point there is little else we can do.
 
 We use the `#[macro_export]` attribute to export the macros to the root crate (the root of our kernel module), so they can be used throughout the kernel.
 
@@ -318,36 +318,15 @@ fn kernel_main() -> ! {
         unsafe{asm!("wfi");}
     }
 }
-...
-```
-```c [kernel.c] {2,5-6}
-#include "kernel.h"
-#include "common.h"
-
-void kernel_main(void) {
-    printf("\n\nHello %s\n", "World!");
-    printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
-
-    for (;;) {
-        __asm__ __volatile__("wfi");
-    }
-}
 ```
 
-Also, Add `common.c` to the compilation targets:
-
-```bash [run.sh] {2}
-$CC $CFLAGS -Wl,-Tkernel.ld -Wl,-Map=kernel.map -o kernel.elf \
-    kernel.c common.c
-```
-
-Now, let's try! You will see `Hello World!` and `1 + 2 = 3, 1234abcd` as shown below:
+Now, let's try! You will see `Hello World!` and `1 + 2 = 3, 0x1234abcd` as shown below:
 
 ```
 $ ./run.sh
 
 Hello World!
-1 + 2 = 3, 1234abcd
+1 + 2 = 3, 0x1234abcd
 ```
 
-The powerful ally "printf debugging" has joined your OS!
+The powerful ally "printon debugging" has joined your OS!
