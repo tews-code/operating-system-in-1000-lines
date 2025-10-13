@@ -222,7 +222,7 @@ fn main() {
 }
 ```
 
-Rust build scripts use `println!()` macros to print commands for Cargo to follow. In this case, we print the linker arguments to ask the linker to use the `kernel.ld` linker script, and to output it's results in a `kernel.map` map file. We also tell Cargo to re-run if the linker script is changed (avoiding having to remember to use `cargo clean` each time we change the linker script.
+Rust build scripts use `println!()` macros to print commands for Cargo to follow. In this case, we print the linker arguments to ask the linker to use the `kernel.ld` linker script, and to output its results in a `kernel.map` map file. We also tell Cargo to re-run if the linker script is changed (avoiding having to remember to use `cargo clean` each time we change the linker script.
 
 ## Minimal kernel
 
