@@ -188,7 +188,7 @@ We've successfully printed some characters. The next item is implementing `print
 
 `println!` macro takes a format string, and the values to be embedded in the output. For example, `println!("1 + 2 = {}", 1 + 2)` will display `1 + 2 = 3`.
 
-While `println!` bundled in the Rust standard library, it is not provided in the `core` Rust library, so we will need to implement this. Specifically, we'll implement a `println!` and a "print!" which does not add a new line character.
+While `println!` bundled in the Rust standard library, it is not provided in the `core` Rust library, so we will need to implement this. Specifically, we'll implement a `println!` and a `print!` (which does not add a new line character).
 
 Since we'll use `println!` in applications too, let's create a new package `common` for code shared between the kernel and userland.
 
