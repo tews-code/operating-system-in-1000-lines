@@ -99,6 +99,10 @@ In the configuration file we simply add the target triple:
 ```toml [.cargo/config.toml]
 [build]
 target="riscv32imac-unknown-none-elf"
+rustflags = ["-g", "-O"]
+
+[target.riscv32i-unknown-none-elf]
+runner = "./run.sh"
 ```
 Then create a Cargo.toml file to describe our workspace
 
