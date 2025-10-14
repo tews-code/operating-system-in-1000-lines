@@ -358,4 +358,4 @@ Hello world! 🦀
 1 + 2 = 3, 0x1234abcd
 ```
 
-The powerful ally "printon debugging" has joined your OS!
+The powerful ally "println debugging" has joined your OS!
