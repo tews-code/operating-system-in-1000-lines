@@ -27,85 +27,92 @@ The CSRs updated in step 2 are mainly as follows. The kernel's exception determi
 
 ## Exception Handler
 
-Now let's write your first exception handler! Here's the entry point of the exception handler to be registered in the `stvec` register:
+Now let's write your first exception handler! Create a new file `entry.rs` and add it as a module in `main.rs`. 
 
-```c [kernel.c]
-__attribute__((naked))
-__attribute__((aligned(4)))
-void kernel_entry(void) {
-    __asm__ __volatile__(
-        "csrw sscratch, sp\n"
-        "addi sp, sp, -4 * 31\n"
-        "sw ra,  4 * 0(sp)\n"
-        "sw gp,  4 * 1(sp)\n"
-        "sw tp,  4 * 2(sp)\n"
-        "sw t0,  4 * 3(sp)\n"
-        "sw t1,  4 * 4(sp)\n"
-        "sw t2,  4 * 5(sp)\n"
-        "sw t3,  4 * 6(sp)\n"
-        "sw t4,  4 * 7(sp)\n"
-        "sw t5,  4 * 8(sp)\n"
-        "sw t6,  4 * 9(sp)\n"
-        "sw a0,  4 * 10(sp)\n"
-        "sw a1,  4 * 11(sp)\n"
-        "sw a2,  4 * 12(sp)\n"
-        "sw a3,  4 * 13(sp)\n"
-        "sw a4,  4 * 14(sp)\n"
-        "sw a5,  4 * 15(sp)\n"
-        "sw a6,  4 * 16(sp)\n"
-        "sw a7,  4 * 17(sp)\n"
-        "sw s0,  4 * 18(sp)\n"
-        "sw s1,  4 * 19(sp)\n"
-        "sw s2,  4 * 20(sp)\n"
-        "sw s3,  4 * 21(sp)\n"
-        "sw s4,  4 * 22(sp)\n"
-        "sw s5,  4 * 23(sp)\n"
-        "sw s6,  4 * 24(sp)\n"
-        "sw s7,  4 * 25(sp)\n"
-        "sw s8,  4 * 26(sp)\n"
-        "sw s9,  4 * 27(sp)\n"
-        "sw s10, 4 * 28(sp)\n"
-        "sw s11, 4 * 29(sp)\n"
+Here's the entry point of the exception handler to be registered in the `stvec` register:
 
-        "csrr a0, sscratch\n"
-        "sw a0, 4 * 30(sp)\n"
+```rust [kernel/src/entry.rs]
+#[unsafe(naked)]
+pub unsafe extern "C" fn kernel_entry() {
+    naked_asm!(
+        ".align 2",
+        // Retrieve the kernel stack of the running process from sscratch.
+        "csrrw sp, sscratch, sp",
+        "addi sp, sp, -4 * 31",
+        "sw ra,  4 * 0(sp)",
+        "sw gp,  4 * 1(sp)",
+        "sw tp,  4 * 2(sp)",
+        "sw t0,  4 * 3(sp)",
+        "sw t1,  4 * 4(sp)",
+        "sw t2,  4 * 5(sp)",
+        "sw t3,  4 * 6(sp)",
+        "sw t4,  4 * 7(sp)",
+        "sw t5,  4 * 8(sp)",
+        "sw t6,  4 * 9(sp)",
+        "sw a0,  4 * 10(sp)",
+        "sw a1,  4 * 11(sp)",
+        "sw a2,  4 * 12(sp)",
+        "sw a3,  4 * 13(sp)",
+        "sw a4,  4 * 14(sp)",
+        "sw a5,  4 * 15(sp)",
+        "sw a6,  4 * 16(sp)",
+        "sw a7,  4 * 17(sp)",
+        "sw s0,  4 * 18(sp)",
+        "sw s1,  4 * 19(sp)",
+        "sw s2,  4 * 20(sp)",
+        "sw s3,  4 * 21(sp)",
+        "sw s4,  4 * 22(sp)",
+        "sw s5,  4 * 23(sp)",
+        "sw s6,  4 * 24(sp)",
+        "sw s7,  4 * 25(sp)",
+        "sw s8,  4 * 26(sp)",
+        "sw s9,  4 * 27(sp)",
+        "sw s10, 4 * 28(sp)",
+        "sw s11, 4 * 29(sp)",
 
-        "mv a0, sp\n"
-        "call handle_trap\n"
+        "csrr a0, sscratch",
+        "sw a0, 4 * 30(sp)",
 
-        "lw ra,  4 * 0(sp)\n"
-        "lw gp,  4 * 1(sp)\n"
-        "lw tp,  4 * 2(sp)\n"
-        "lw t0,  4 * 3(sp)\n"
-        "lw t1,  4 * 4(sp)\n"
-        "lw t2,  4 * 5(sp)\n"
-        "lw t3,  4 * 6(sp)\n"
-        "lw t4,  4 * 7(sp)\n"
-        "lw t5,  4 * 8(sp)\n"
-        "lw t6,  4 * 9(sp)\n"
-        "lw a0,  4 * 10(sp)\n"
-        "lw a1,  4 * 11(sp)\n"
-        "lw a2,  4 * 12(sp)\n"
-        "lw a3,  4 * 13(sp)\n"
-        "lw a4,  4 * 14(sp)\n"
-        "lw a5,  4 * 15(sp)\n"
-        "lw a6,  4 * 16(sp)\n"
-        "lw a7,  4 * 17(sp)\n"
-        "lw s0,  4 * 18(sp)\n"
-        "lw s1,  4 * 19(sp)\n"
-        "lw s2,  4 * 20(sp)\n"
-        "lw s3,  4 * 21(sp)\n"
-        "lw s4,  4 * 22(sp)\n"
-        "lw s5,  4 * 23(sp)\n"
-        "lw s6,  4 * 24(sp)\n"
-        "lw s7,  4 * 25(sp)\n"
-        "lw s8,  4 * 26(sp)\n"
-        "lw s9,  4 * 27(sp)\n"
-        "lw s10, 4 * 28(sp)\n"
-        "lw s11, 4 * 29(sp)\n"
-        "lw sp,  4 * 30(sp)\n"
-        "sret\n"
-    );
+        // Reset the kernel stack
+        "addi a0, sp, 4 * 31",
+        "csrw sscratch, a0",
+
+        "mv a0, sp",
+        "call handle_trap",
+
+        "lw ra,  4 * 0(sp)",
+        "lw gp,  4 * 1(sp)",
+        "lw tp,  4 * 2(sp)",
+        "lw t0,  4 * 3(sp)",
+        "lw t1,  4 * 4(sp)",
+        "lw t2,  4 * 5(sp)",
+        "lw t3,  4 * 6(sp)",
+        "lw t4,  4 * 7(sp)",
+        "lw t5,  4 * 8(sp)",
+        "lw t6,  4 * 9(sp)",
+        "lw a0,  4 * 10(sp)",
+        "lw a1,  4 * 11(sp)",
+        "lw a2,  4 * 12(sp)",
+        "lw a3,  4 * 13(sp)",
+        "lw a4,  4 * 14(sp)",
+        "lw a5,  4 * 15(sp)",
+        "lw a6,  4 * 16(sp)",
+        "lw a7,  4 * 17(sp)",
+        "lw s0,  4 * 18(sp)",
+        "lw s1,  4 * 19(sp)",
+        "lw s2,  4 * 20(sp)",
+        "lw s3,  4 * 21(sp)",
+        "lw s4,  4 * 22(sp)",
+        "lw s5,  4 * 23(sp)",
+        "lw s6,  4 * 24(sp)",
+        "lw s7,  4 * 25(sp)",
+        "lw s8,  4 * 26(sp)",
+        "lw s9,  4 * 27(sp)",
+        "lw s10, 4 * 28(sp)",
+        "lw s11, 4 * 29(sp)",
+        "lw sp,  4 * 30(sp)",
+        "sret"
+    )
 }
 ```
 
@@ -114,7 +121,7 @@ Here are some key points:
 - `sscratch` register is used as a temporary storage to save the stack pointer at the time of exception occurrence, which is later restored.
 - Floating-point registers are not used within the kernel, and thus there's no need to save them here. Generally, they are saved and restored during thread switching.
 - The stack pointer is set in the `a0` register, and the `handle_trap` function is called. At this point, the address pointed to by the stack pointer contains register values stored in the same structure as the `trap_frame` structure described later.
-- Adding `__attribute__((aligned(4)))` aligns the function's starting address to a 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
+- Adding `.align 2` aligns the function's starting address to a 2^2 = 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
 
 > [!NOTE]
 >
@@ -122,84 +129,105 @@ Here are some key points:
 >
 > If you accidentally overwrite `a0` register, it can lead to hard-to-debug problems like "local variable values change for no apparent reason". Save the program state perfectly not to spend your precious Saturday night debugging!
 
-In the entry point, the following `handle_trap` function is called to handle the exception in our favorite C language:
+In the entry point, the following `handle_trap` function is called to handle the exception in our favorite Rust language:
 
-```c [kernel.c]
-void handle_trap(struct trap_frame *f) {
-    uint32_t scause = READ_CSR(scause);
-    uint32_t stval = READ_CSR(stval);
-    uint32_t user_pc = READ_CSR(sepc);
+```rust [kernel/src/entry.rs]
+#[unsafe(no_mangle)]
+extern "C" fn handle_trap(f: &mut TrapFrame) {
+    let scause = read_csr!("scause");
+    let stval = read_csr!("stval");
+    let user_pc = read_csr!("sepc");
 
-    PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    panic!("unexpected trap scause=0x{:x}, stval=0x{:x}, sepc=0x{:x}", scause, stval, user_pc);
 }
 ```
 
 It reads why the exception has occurred, and triggers a kernel panic for debugging purposes.
 
-Let's define the various macros used here in `kernel.h`:
+Let's define the various macros and data structures used here in `entry.rs`:
 
-```c [kernel.h]
-#include "common.h"
+```rust [kernel/src/entry.rs]
+#[repr(C, packed)]
+struct TrapFrame{
+    ra: usize,
+    gp: usize,
+    tp: usize,
+    t0: usize,
+    t1: usize,
+    t2: usize,
+    t3: usize,
+    t4: usize,
+    t5: usize,
+    t6: usize,
+    a0: usize,
+    a1: usize,
+    a2: usize,
+    a3: usize,
+    a4: usize,
+    a5: usize,
+    a6: usize,
+    a7: usize,
+    s0: usize,
+    s1: usize,
+    s2: usize,
+    s3: usize,
+    s4: usize,
+    s5: usize,
+    s6: usize,
+    s7: usize,
+    s8: usize,
+    s9: usize,
+    s10: usize,
+    s11: usize,
+    sp: usize,
+}
 
-struct trap_frame {
-    uint32_t ra;
-    uint32_t gp;
-    uint32_t tp;
-    uint32_t t0;
-    uint32_t t1;
-    uint32_t t2;
-    uint32_t t3;
-    uint32_t t4;
-    uint32_t t5;
-    uint32_t t6;
-    uint32_t a0;
-    uint32_t a1;
-    uint32_t a2;
-    uint32_t a3;
-    uint32_t a4;
-    uint32_t a5;
-    uint32_t a6;
-    uint32_t a7;
-    uint32_t s0;
-    uint32_t s1;
-    uint32_t s2;
-    uint32_t s3;
-    uint32_t s4;
-    uint32_t s5;
-    uint32_t s6;
-    uint32_t s7;
-    uint32_t s8;
-    uint32_t s9;
-    uint32_t s10;
-    uint32_t s11;
-    uint32_t sp;
-} __attribute__((packed));
+#[allow(unused_imports)]
+use crate::{read_csr, write_csr};
 
-#define READ_CSR(reg)                                                          \
-    ({                                                                         \
-        unsigned long __tmp;                                                   \
-        __asm__ __volatile__("csrr %0, " #reg : "=r"(__tmp));                  \
-        __tmp;                                                                 \
-    })
+#[macro_export]
+macro_rules! read_csr {
+    ( $reg:literal ) => {
+        {
+            let val: usize;
+            unsafe{core::arch::asm!(concat!("csrr {}, ", $reg), out(reg) val)}
+            val
+        }
+    };
+}
 
-#define WRITE_CSR(reg, value)                                                  \
-    do {                                                                       \
-        uint32_t __tmp = (value);                                              \
-        __asm__ __volatile__("csrw " #reg ", %0" ::"r"(__tmp));                \
-    } while (0)
+#[macro_export]
+macro_rules! write_csr {
+    ( $reg:literal, $val:expr ) => {
+        {
+            let val = $val; // Expand metavariable outside of unsafe block (avoids clippy warning)
+            unsafe{core::arch::asm!(concat!("csrw ", $reg, ", {}"), in(reg) val)}
+        }
+    };
+}
 ```
 
-The `trap_frame` struct represents the program state saved in `kernel_entry`. `READ_CSR` and `WRITE_CSR` macros are convenient macros for reading and writing CSR registers.
+The `trap_frame` struct represents the program state saved in `kernel_entry`. We use a "C" representation so that the struct member order is kept as listed, and use `packed` to make sure no unwanted padding is added. `read_csr!` and `write_csr!` macros are convenient macros for reading and writing CSR registers.
 
 The last thing we need to do is to tell the CPU where the exception handler is located. It's done by setting the `stvec` register in the `kernel_main` function:
 
-```c [kernel.c] {4-5}
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+```rust [kernel/src/main.rs] {2-5, 10-11}
+...
+#[macro_use]
+mod entry;
 
-    WRITE_CSR(stvec, (uint32_t) kernel_entry); // new
-    __asm__ __volatile__("unimp"); // new
-```
+use crate::entry::kernel_entry;
+...
+fn kernel_main() -> ! {
+    ...
+
+    write_csr!("stvec", kernel_entry as usize); // new
+    unsafe{core::arch::asm!("unimp")}; // new
+
+    panic!("booted!");
+}
+
+...
 
 In addition to setting the `stvec` register, it executes `unimp` instruction. it's a pseudo instruction which triggers an illegal instruction exception.
 
@@ -221,8 +249,9 @@ Let's try running it and confirm that the exception handler is called:
 
 ```
 $ ./run.sh
-Hello World!
-PANIC: kernel.c:47: unexpected trap scause=00000002, stval=ffffff84, sepc=8020015e
+Hello World! 🦀
+⚠️ Panic: panicked at kernel/src/entry.rs:129:5:
+unexpected trap scause=0x7, stval=0xffffff84, sepc=0x80200178
 ```
 
 According to the specification, when the value of `scause` is 2, it indicates an "Illegal instruction," meaning that program tried to execute an invalid instruction. This is precisely the expected behavior of the `unimp` instruction!
