@@ -54,4 +54,6 @@ We create a `struct PAddr` which has a single tuple `usize`. This is has a memor
 
 We also create an equivalent `struct VAddr`, but here we have not bothered to create the helper functions as we will not need them in our simple operating system.
 
-Finally, we create an `align_up` function. We use the `debug_assert!` macro to catch any attempts to align to a non power of two (but this would be optimised out of release code).
+Finally, we create an `align_up` function. We use the `debug_assert!` macro to catch any attempts to align to a non power of two (but this would be optimised out of release code). 
+
+align_up is useful when dealing with memory alignment. For example, align_up(0x1234, 0x1000) returns 0x2000.
