@@ -117,7 +117,7 @@ Here are some key points:
 - `sscratch` register is used as a temporary storage to save the stack pointer at the time of exception occurrence, which is later restored.
 - Floating-point registers are not used within the kernel, and thus there's no need to save them here. Generally, they are saved and restored during thread switching.
 - The stack pointer is set in the `a0` register, and the `handle_trap` function is called. At this point, the address pointed to by the stack pointer contains register values stored in the same structure as the `trap_frame` structure described later.
-- Adding `.align 2` aligns the function's starting address to a 2x<sup>2</sup> = 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
+- Adding `.align 2` aligns the function's starting address to a 2<sup>2</sup> = 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
 
 > [!NOTE]
 >
@@ -138,7 +138,7 @@ extern "C" fn handle_trap(f: &mut TrapFrame) {
 }
 ```
 
-It reads why the exception has occurred, and triggers a kernel panic for debugging purposes.
+It reads why the exception has occurred, and triggers a kernel panic for debugging purposes. We use `no_mangle` so that our assembly can find this function by name, and `"C"` representation so that registers are used as function arguments in an expected way.
 
 Let's define the various macros and data structures used here in `entry.rs`:
 
