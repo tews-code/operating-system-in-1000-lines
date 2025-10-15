@@ -222,12 +222,11 @@ fn kernel_main() -> ! {
 
     panic!("booted!");
 }
-
-...
+```
 
 In addition to setting the `stvec` register, it executes `unimp` instruction. it's a pseudo instruction which triggers an illegal instruction exception.
 
-> [NOTE!]
+> [!NOTE]
 >
 > **`unimp` is a "pseudo" instruction**.
 >
