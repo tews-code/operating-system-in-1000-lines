@@ -37,7 +37,7 @@ pub unsafe extern "C" fn kernel_entry() {
     naked_asm!(
         ".align 2",
         // Retrieve the kernel stack of the running process from sscratch.
-        "csrrw sp, sscratch, sp",
+        "csrw sscratch, sp",
         "addi sp, sp, -4 * 31",
         "sw ra,  4 * 0(sp)",
         "sw gp,  4 * 1(sp)",
@@ -72,10 +72,6 @@ pub unsafe extern "C" fn kernel_entry() {
 
         "csrr a0, sscratch",
         "sw a0, 4 * 30(sp)",
-
-        // Reset the kernel stack
-        "addi a0, sp, 4 * 31",
-        "csrw sscratch, a0",
 
         "mv a0, sp",
         "call handle_trap",
@@ -121,7 +117,7 @@ Here are some key points:
 - `sscratch` register is used as a temporary storage to save the stack pointer at the time of exception occurrence, which is later restored.
 - Floating-point registers are not used within the kernel, and thus there's no need to save them here. Generally, they are saved and restored during thread switching.
 - The stack pointer is set in the `a0` register, and the `handle_trap` function is called. At this point, the address pointed to by the stack pointer contains register values stored in the same structure as the `trap_frame` structure described later.
-- Adding `.align 2` aligns the function's starting address to a 2^2 = 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
+- Adding `.align 2` aligns the function's starting address to a 2x<sup>2</sup> = 4-byte boundary. This is because the `stvec` register not only holds the address of the exception handler but also has flags representing the mode in its lower 2 bits.
 
 > [!NOTE]
 >
@@ -231,7 +227,7 @@ fn kernel_main() -> ! {
 
 In addition to setting the `stvec` register, it executes `unimp` instruction. it's a pseudo instruction which triggers an illegal instruction exception.
 
-> [!NOTE]
+> [NOTE!]
 >
 > **`unimp` is a "pseudo" instruction**.
 >
@@ -250,8 +246,8 @@ Let's try running it and confirm that the exception handler is called:
 ```
 $ ./run.sh
 Hello World! 🦀
-⚠️ Panic: panicked at kernel/src/entry.rs:129:5:
-unexpected trap scause=0x7, stval=0xffffff84, sepc=0x80200178
+⚠️  Panic: panicked at kernel/src/entry.rs:128:5:
+unexpected trap scause=0x2, stval=0x0, sepc=0x802002c2
 ```
 
 According to the specification, when the value of `scause` is 2, it indicates an "Illegal instruction," meaning that program tried to execute an invalid instruction. This is precisely the expected behavior of the `unimp` instruction!
@@ -259,6 +255,6 @@ According to the specification, when the value of `scause` is 2, it indicates an
 Let's also check where the value of `sepc` is pointing. If it's pointing to the line where the `unimp` instruction is called,  everything is working correctly:
 
 ```
-$ llvm-addr2line -e kernel.elf 8020015e
-/Users/seiya/os-from-scratch/kernel.c:129
+$ addr2line -e kernel.elf 802002c2
+~/src/os1k/kernel/src/main.rs:40
 ```
