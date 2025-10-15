@@ -108,8 +108,8 @@ To simplify things, we will ignore the requested alignment, and always align to 
 
 You will find the following key points:
 
-- `ALLOCATOR` is defined as a `static` variable. This means, unlike local variables, its value is retained between function calls. That is, it behaves like a global variable. However, we need to change (mutate) the value despite it being static, so we need "interior mutability", which we get from `SpinLock`. At first the allocator is uninitialised, so we use `Option` to return `None` until initialisation is complete. The resulting definition of `ALLOCATOR` is a `struct BumpAllocator(SpinLock<Option<PAddr>>);`
-- PAGE_SIZE` represents the size of one page.
+- `ALLOCATOR` is defined as a `static` variable. This means, unlike local variables, its value is retained between function calls. That is, it behaves like a global variable. However, we need to change (mutate) the value despite it being static, so we need "interior mutability", which we get from `SpinLock`. At first the allocator is uninitialised, so we use `Option` to return `None` until initialisation is complete. The resulting definition of `ALLOCATOR` is a `struct BumpAllocator(SpinLock<Option<PAddr>>);`. We also mark this variable with `#[global_allocator]` to allow Rust functions to find it when allocating.
+- `PAGE_SIZE` represents the size of one page.
 - `next_paddr` points to the start address of the "next area to be allocated" (free area). When allocating, `next_paddr` is advanced by the size being allocated.
 - `next_paddr` initially holds the address of `__free_ram`. This means memory is allocated sequentially starting from `__free_ram`.
 - `__free_ram` is placed on a 4KB boundary due to `ALIGN(4096)` in the linker script. Therefore, the `alloc` function always returns an address aligned to 4KB.
@@ -144,7 +144,7 @@ fn kernel_main {
 
     panic!("booted";
 }
-
+```
 Verify that the first address matches the address of `__free_ram`, and that the final address matches an address 8KB after:
 
 ```
