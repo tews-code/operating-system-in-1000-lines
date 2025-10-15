@@ -34,38 +34,88 @@ Let's implement a function to allocate memory dynamically. Instead of allocating
 >
 > 4KB = 4096 = 0x1000 (hexadecimal). Thus, page-aligned addresses look nicely aligned in hexadecimal.
 
-The following `alloc_pages` function dynamically allocates `n` pages of memory and returns the starting address:
+The following allocator function dynamically allocates pages of memory. Create a new module file `allocator.rs` and add the module in `main.rs`.
 
-```c [kernel.c]
-extern char __free_ram[], __free_ram_end[];
+```rust [kernel/src/allocator.rs]
+//! Allocate memory pages
 
-paddr_t alloc_pages(uint32_t n) {
-    static paddr_t next_paddr = (paddr_t) __free_ram;
-    paddr_t paddr = next_paddr;
-    next_paddr += n * PAGE_SIZE;
+use core::alloc::{GlobalAlloc, Layout};
+use core::ptr::write_bytes;
 
-    if (next_paddr > (paddr_t) __free_ram_end)
-        PANIC("out of memory");
+use crate::address::{align_up, PAddr};
+use crate::spinlock::SpinLock;
 
-    memset((void *) paddr, 0, n * PAGE_SIZE);
-    return paddr;
+const PAGE_SIZE: usize = 4096;
+
+//Safety: Symbols created by linker script
+unsafe extern "C" {
+    static __free_ram: u8;
+    static __free_ram_end: u8;
+}
+
+#[derive(Debug)]
+struct BumpAllocator(SpinLock<Option<PAddr>>);
+
+#[global_allocator]
+static ALLOCATOR: BumpAllocator = BumpAllocator(
+    SpinLock::new(None),
+);
+
+unsafe impl GlobalAlloc for BumpAllocator {
+    // Safety: Caller must ensure that Layout has a non-zero size
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        debug_assert!(layout.size() > 0, "allocation size must be non-zero");
+
+        let mut next_paddr = self.0.lock();
+
+        // Initialise on first use
+        if next_paddr.is_none() {
+            *next_paddr = Some(PAddr::new(&raw const __free_ram as usize))
+        }
+
+        // Safe to unwrap as we know it is Some now
+        let paddr = next_paddr.unwrap();
+        let new_paddr = paddr.as_usize() + align_up(layout.size(), PAGE_SIZE);
+        if new_paddr > &raw const __free_ram_end as usize {
+            panic!("out of memory");
+        }
+        *next_paddr = Some(PAddr::new(new_paddr));
+
+        // Safety: paddr.as_ptr() is aligned and not null; entire PAGE_SIZE of bytes is available for write
+        unsafe{ write_bytes(paddr.as_ptr() as *mut usize, 0, PAGE_SIZE) };
+
+        // Testing only - comment out
+        common::println!("alloc_pages test: {:x}", paddr.as_usize());
+
+        paddr.as_ptr() as *mut u8
+    }
+
+    unsafe fn dealloc(&self, _: *mut u8, _: Layout) {}
 }
 ```
 
-`PAGE_SIZE` represents the size of one page. Define it in `common.h`:
+We are going to use the Rust `GlobalAllocator` trait used for building allocators. We create a struct `BumpAllocator` to associate with the trait, and in our simple allocator all we need is the next physical address to allocate. We then need to provide two functions for the trait: `alloc` and `dealloc` - and in return we can use the `alloc` crate.
 
-```c [common.h]
-#define PAGE_SIZE 4096
+The `alloc` function signature is ` unsafe fn alloc(&self, layout: Layout) -> *mut u8`, where the allocation request is provided as a `Layout` type: 
+
+```rust
+pub struct Layout {
+    size: usize,
+    align: Alignment,
+}
 ```
+To simplify things, we will ignore the requested alignment, and always align to a full page.
 
 You will find the following key points:
 
-- `next_paddr` is defined as a `static` variable. This means, unlike local variables, its value is retained between function calls. That is, it behaves like a global variable.
+- `ALLOCATOR` is defined as a `static` variable. This means, unlike local variables, its value is retained between function calls. That is, it behaves like a global variable. However, we need to change (mutate) the value despite it being static, so we need "interior mutability", which we get from `SpinLock`. At first the allocator is uninitialised, so we use `Option` to return `None` until initialisation is complete. The resulting definition of `ALLOCATOR` is a `struct BumpAllocator(SpinLock<Option<PAddr>>);`
+- PAGE_SIZE` represents the size of one page.
 - `next_paddr` points to the start address of the "next area to be allocated" (free area). When allocating, `next_paddr` is advanced by the size being allocated.
 - `next_paddr` initially holds the address of `__free_ram`. This means memory is allocated sequentially starting from `__free_ram`.
-- `__free_ram` is placed on a 4KB boundary due to `ALIGN(4096)` in the linker script. Therefore, the `alloc_pages` function always returns an address aligned to 4KB.
+- `__free_ram` is placed on a 4KB boundary due to `ALIGN(4096)` in the linker script. Therefore, the `alloc` function always returns an address aligned to 4KB.
 - If it tries to allocate beyond `__free_ram_end`, in other words, if it runs out of memory, a kernel panic occurs.
-- The `memset` function ensures that the allocated memory area is always filled with zeroes. This is to avoid hard-to-debug issues caused by uninitialized memory.
+- The `write_bytes` function ensures that the allocated memory area is always filled with zeroes. This is to avoid hard-to-debug issues caused by uninitialized memory.
+- The `dealloc` function does nothing - we never deallocate memory.
 
 Isn't it simple? However, there is a big problem with this memory allocation algorithm: allocated memory cannot be freed! That said, it's good enough for our simple hobby OS.
 
@@ -79,30 +129,34 @@ Isn't it simple? However, there is a big problem with this memory allocation alg
 
 Let's test the memory allocation function we've implemented. Add some code to `kernel_main`:
 
-```c [kernel.c] {4-7}
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+```rust [kernel/src/main.rs]
+...
+pub extern crate alloc;
+use alloc::{string::String, vec, boxed::Box};
+...
+fn kernel_main {
+    ...
+    let s = String::from("Hello World! 🦀");
+    let v = vec![1, 2, 3];
+    let b = Box::new(42);
+    
+    println!("We can now allocate! Let's try strings: {s}, vectors: {v:?} and boxes: {b}");
 
-    paddr_t paddr0 = alloc_pages(2);
-    paddr_t paddr1 = alloc_pages(1);
-    printf("alloc_pages test: paddr0=%x\n", paddr0);
-    printf("alloc_pages test: paddr1=%x\n", paddr1);
-
-    PANIC("booted!");
+    panic!("booted";
 }
-```
 
-Verify that the first address (`paddr0`) matches the address of `__free_ram`, and that the next address (`paddr1`) matches an address 8KB after `paddr0`:
+Verify that the first address matches the address of `__free_ram`, and that the final address matches an address 8KB after:
 
 ```
 $ ./run.sh
-Hello World!
-alloc_pages test: paddr0=80221000
-alloc_pages test: paddr1=80223000
+alloc_pages test: 80222000
+alloc_pages test: 80223000
+alloc_pages test: 80224000
+We can now allocate! Let's try strings: Hello World! 🦀, vectors: [1, 2, 3] and boxes: 42
 ```
 
 ```
 $ llvm-nm kernel.elf | grep __free_ram
-80221000 R __free_ram
-84221000 R __free_ram_end
+80222000 B __free_ram
+84222000 B __free_ram_end
 ```
