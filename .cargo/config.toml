@@ -1,0 +1,6 @@
+[build]
+target="riscv32imac-unknown-none-elf"
+rustflags = ["-g", "-O"]
+
+[target.riscv32imac-unknown-none-elf]
+runner = "./run.sh"
