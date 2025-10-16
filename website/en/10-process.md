@@ -206,6 +206,10 @@ pub fn create_process(pc: usize) -> usize {
 }
 ```
 
+> [!TIP]
+> The PROCS array is `static`, meaning it is placed in the `.bss` segment. When we call `context_switch`, our stack pointer will start to use the stack in the `.bss` segment directly. That's OK - any writeable memory can be used as a stack.
+> You can see this in `kernel.map` by searching for "PROCS", which will be between `__bss` and `__bss_end`.
+
 ## Testing context switch
 
 We have implemented the most basic function of processes - concurrent execution of multiple programs. Let's create two processes:
