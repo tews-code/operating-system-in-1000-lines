@@ -10,20 +10,40 @@ A process is an instance of an application. Each process has its own independent
 
 The following `process` structure defines a process object. It's also known as  _"Process Control Block (PCB)"_.
 
-```c [kernel.h]
-#define PROCS_MAX 8       // Maximum number of processes
+Create a new module `process.rs`.
 
-#define PROC_UNUSED   0   // Unused process control structure
-#define PROC_RUNNABLE 1   // Runnable process
+```rust [kernel/src/process.rs]
+//! Process
 
-struct process {
-    int pid;             // Process ID
-    int state;           // Process state: PROC_UNUSED or PROC_RUNNABLE
-    vaddr_t sp;          // Stack pointer
-    uint8_t stack[8192]; // Kernel stack
-};
+use crate::address::VAddr;
+
+const PROCS_MAX: usize = 8;    // Maximum number of processes
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum State {
+    Unused,     // Unused process control structure
+    Runnable,   // Runnable process
+}
+
+#[derive(Copy, Clone)]
+pub struct Process {
+    pub pid: usize,            // Process ID
+    state: State,              // Process state: Unused or Runnable
+    pub sp: VAddr,             // Stack pointer
+    stack: [u8; 8192],         // Kernel stack
+}
+
+impl Process {
+    const fn empty() -> Self {
+        Self {
+            pid: 0,
+            state: State::Unused,
+            sp: VAddr::new(0),
+            stack: [0; 8192],
+        }
+    }
+}
 ```
-
 The kernel stack contains saved CPU registers, return addresses (where it was called from), and local variables. By preparing a kernel stack for each process, we can implement context switching by saving and restoring CPU registers, and switching the stack pointer.
 
 > [!TIP]
@@ -36,51 +56,55 @@ The kernel stack contains saved CPU registers, return addresses (where it was ca
 
 Switching the process execution context is called *"context switching"*. The following `switch_context` function is the implementation of context switching:
 
-```c [kernel.c]
-__attribute__((naked)) void switch_context(uint32_t *prev_sp,
-                                           uint32_t *next_sp) {
-    __asm__ __volatile__(
+```rust [kernel/src/process.rs]
+
+use core::arch::naked_asm;
+
+#[unsafe(naked)]
+pub unsafe extern "C" fn switch_context(prev_sp: *mut usize, next_sp: *mut usize) {
+    naked_asm!(
+        ".align 2",
         // Save callee-saved registers onto the current process's stack.
-        "addi sp, sp, -13 * 4\n" // Allocate stack space for 13 4-byte registers
-        "sw ra,  0  * 4(sp)\n"   // Save callee-saved registers only
-        "sw s0,  1  * 4(sp)\n"
-        "sw s1,  2  * 4(sp)\n"
-        "sw s2,  3  * 4(sp)\n"
-        "sw s3,  4  * 4(sp)\n"
-        "sw s4,  5  * 4(sp)\n"
-        "sw s5,  6  * 4(sp)\n"
-        "sw s6,  7  * 4(sp)\n"
-        "sw s7,  8  * 4(sp)\n"
-        "sw s8,  9  * 4(sp)\n"
-        "sw s9,  10 * 4(sp)\n"
-        "sw s10, 11 * 4(sp)\n"
-        "sw s11, 12 * 4(sp)\n"
+        "addi sp, sp, -13 * 4", // Allocate stack space for 13 4-byte registers
+        "sw ra,  0  * 4(sp)",  // Save callee-saved registers only
+        "sw s0,  1  * 4(sp)",
+        "sw s1,  2  * 4(sp)",
+        "sw s2,  3  * 4(sp)",
+        "sw s3,  4  * 4(sp)",
+        "sw s4,  5  * 4(sp)",
+        "sw s5,  6  * 4(sp)",
+        "sw s6,  7  * 4(sp)",
+        "sw s7,  8  * 4(sp)",
+        "sw s8,  9  * 4(sp)",
+        "sw s9,  10 * 4(sp)",
+        "sw s10, 11 * 4(sp)",
+        "sw s11, 12 * 4(sp)",
 
         // Switch the stack pointer.
-        "sw sp, (a0)\n"         // *prev_sp = sp;
-        "lw sp, (a1)\n"         // Switch stack pointer (sp) here
+        "sw sp, (a0)",         // *prev_sp = sp;
+        "lw sp, (a1)",         // Switch stack pointer (sp) here
 
         // Restore callee-saved registers from the next process's stack.
-        "lw ra,  0  * 4(sp)\n"  // Restore callee-saved registers only
-        "lw s0,  1  * 4(sp)\n"
-        "lw s1,  2  * 4(sp)\n"
-        "lw s2,  3  * 4(sp)\n"
-        "lw s3,  4  * 4(sp)\n"
-        "lw s4,  5  * 4(sp)\n"
-        "lw s5,  6  * 4(sp)\n"
-        "lw s6,  7  * 4(sp)\n"
-        "lw s7,  8  * 4(sp)\n"
-        "lw s8,  9  * 4(sp)\n"
-        "lw s9,  10 * 4(sp)\n"
-        "lw s10, 11 * 4(sp)\n"
-        "lw s11, 12 * 4(sp)\n"
-        "addi sp, sp, 13 * 4\n"  // We've popped 13 4-byte registers from the stack
-        "ret\n"
-    );
+        "lw ra,  0  * 4(sp)", // Restore callee-saved registers only
+        "lw s0,  1  * 4(sp)",
+        "lw s1,  2  * 4(sp)",
+        "lw s2,  3  * 4(sp)",
+        "lw s3,  4  * 4(sp)",
+        "lw s4,  5  * 4(sp)",
+        "lw s5,  6  * 4(sp)",
+        "lw s6,  7  * 4(sp)",
+        "lw s7,  8  * 4(sp)",
+        "lw s8,  9  * 4(sp)",
+        "lw s9,  10 * 4(sp)",
+        "lw s10, 11 * 4(sp)",
+        "lw s11, 12 * 4(sp)",
+        "addi sp, sp, 13 * 4",  // We've popped 13 4-byte registers from the stack
+        "ret",
+    )
 }
 ```
 
-`switch_context` saves the callee-saved registers onto the stack, switches the stack pointer, and then restores the callee-saved registers from the stack. In other words, the execution context is stored as temporary local variables on the stack. Alternatively, you could save the context in `struct process`, but this stack-based approach is beautifully simple, isn't it?
+`switch_context` saves the callee-saved registers onto the stack, switches the stack pointer, and then restores the callee-saved registers from the stack. In other words, the execution context is stored as temporary local variables on the stack. Alternatively, you could save the context in `struct Process`, but this stack-based approach is beautifully simple, isn't it?
 
 Callee-saved registers are registers that a called function must restore before returning. In RISC-V, `s0` to `s11` are callee-saved registers. Other registers like `a0` are caller-saved registers, and already saved on the stack by the caller. This is why `switch_context` handles only part of registers.
 
@@ -90,47 +114,95 @@ The `naked` attribute tells the compiler not to generate any other code than the
 >
 > Callee/Caller saved registers are defined in [Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf). Compilers generate code based on this convention.
 
-Next, let's implement the process initialization function, `create_process`. It takes the entry point as a parameter, and returns a pointer to the created `process` struct:
+Next, let's implement the process initialization function, `create_process`. It takes the entry point as a parameter, and returns the `pid` of the created `Process` struct:
 
-```c
-struct process procs[PROCS_MAX]; // All process control structures.
+```rust [kernel/src/process.rs]
+use crate::spinlock::SpinLock;
 
-struct process *create_process(uint32_t pc) {
-    // Find an unused process control structure.
-    struct process *proc = NULL;
-    int i;
-    for (i = 0; i < PROCS_MAX; i++) {
-        if (procs[i].state == PROC_UNUSED) {
-            proc = &procs[i];
-            break;
-        }
+pub struct Procs(pub SpinLock<[Process; PROCS_MAX]>);
+
+impl Procs {
+    const fn new() -> Self {
+        Self(
+            SpinLock::new([Process::empty(); PROCS_MAX])
+        )
     }
 
-    if (!proc)
-        PANIC("no free process slots");
+    pub fn get_disjoint_sp_ptrs(&self, pid_a: usize, pid_b: usize) -> Option<(*mut usize, *mut usize)> {
+        let mut procs = self.0.lock();
+
+        let index_a = procs.iter().position(|p| p.pid == pid_a)?;
+        let index_b = procs.iter().position(|p| p.pid == pid_b)?;
+
+        debug_assert_ne!(index_a, index_b, "processes must be different");
+
+        // Method allows us to get two &mut Process from the one Procs array at the same time
+        let [proc_a, proc_b] = procs.get_disjoint_mut([index_a, index_b]).ok()?;
+
+        Some((proc_a.sp.as_ptr_mut(), proc_b.sp.as_ptr_mut()))
+    }
+}
+
+// Optional - but vital for debugging if `switch_context` isn't working.
+impl fmt::Display for Procs {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let procs = PROCS.0.lock();
+        for (i, process) in procs.iter().enumerate() {
+            writeln!(f, "PROC[{i}]")?;
+            write!(f, "PID: {} ", process.pid)?;
+            write!(f, "SP: {:x?} ", process.sp)?;
+            writeln!(f, "STATE: {:?} ", process.state)?;
+            writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
+        }
+        Ok(())
+    }
+}
+
+pub static PROCS: Procs = Procs::new();  // All process control structures.
+
+pub fn create_process(pc: usize) -> usize {
+
+    let mut procs = PROCS.0.lock();
+
+    // Find an unused process control structure.
+    let (i, process) = procs.iter_mut()
+        .enumerate()
+        .find(|(_, p)| p.state == State::Unused)
+        .expect("no free process slots");
 
     // Stack callee-saved registers. These register values will be restored in
     // the first context switch in switch_context.
-    uint32_t *sp = (uint32_t *) &proc->stack[sizeof(proc->stack)];
-    *--sp = 0;                      // s11
-    *--sp = 0;                      // s10
-    *--sp = 0;                      // s9
-    *--sp = 0;                      // s8
-    *--sp = 0;                      // s7
-    *--sp = 0;                      // s6
-    *--sp = 0;                      // s5
-    *--sp = 0;                      // s4
-    *--sp = 0;                      // s3
-    *--sp = 0;                      // s2
-    *--sp = 0;                      // s1
-    *--sp = 0;                      // s0
-    *--sp = (uint32_t) pc;          // ra
+    let callee_saved_regs: [usize; 13] = [
+        pc,            // ra
+        0,             // s0
+        0,             // s1
+        0,             // s2
+        0,             // s3
+        0,             // s4
+        0,             // s5
+        0,             // s6
+        0,             // s7
+        0,             // s8
+        0,             // s9
+        0,             // s10
+        0,             // s11
+    ];
 
-    // Initialize fields.
-    proc->pid = i + 1;
-    proc->state = PROC_RUNNABLE;
-    proc->sp = (uint32_t) sp;
-    return proc;
+    // Place the callee-saved registers at the end of the stack
+    let callee_saved_regs_start = process.stack.len() - callee_saved_regs.len() * size_of::<usize>();
+    let mut offset = callee_saved_regs_start;
+    for reg in &callee_saved_regs {
+        let bytes = reg.to_ne_bytes(); // native endian
+        process.stack[offset..offset + size_of::<usize>()].copy_from_slice(&bytes);
+        offset += size_of::<usize>();
+    }
+
+    // Initialise fields.
+    process.pid = i + 1;
+    process.state = State::Runnable;
+    process.sp = VAddr::new(&raw const process.stack[callee_saved_regs_start] as usize);
+
+    process.pid
 }
 ```
 
@@ -138,58 +210,97 @@ struct process *create_process(uint32_t pc) {
 
 We have implemented the most basic function of processes - concurrent execution of multiple programs. Let's create two processes:
 
-```c [kernel.c] {1-25,32-34}
-void delay(void) {
-    for (int i = 0; i < 30000000; i++)
-        __asm__ __volatile__("nop"); // do nothing
-}
-
-struct process *proc_a;
-struct process *proc_b;
-
-void proc_a_entry(void) {
-    printf("starting process A\n");
-    while (1) {
-        putchar('A');
-        switch_context(&proc_a->sp, &proc_b->sp);
-        delay();
+```rust [kernel/src/main.rs]
+fn delay() {
+    for _ in 0..300_000_000usize {
+        unsafe{asm!("nop");} // do nothing
     }
 }
 
-void proc_b_entry(void) {
-    printf("starting process B\n");
-    while (1) {
-        putchar('B');
-        switch_context(&proc_b->sp, &proc_a->sp);
-        delay();
+static PROC_A: SpinLock<Option<usize>> = SpinLock::new(None);
+static PROC_B: SpinLock<Option<usize>> = SpinLock::new(None);
+
+fn proc_a_entry() {
+    println!("starting process A");
+    loop {
+        print!("🐈");
+
+        let proc_a_pid = PROC_A.lock().expect("should be initialised");
+        let proc_b_pid = PROC_B.lock().expect("should be initialised");
+
+        let (proc_a_sp_ptr, proc_b_sp_ptr) = PROCS
+            .get_disjoint_sp_ptrs(proc_a_pid, proc_b_pid)
+            .expect("failed to get stack pointers for context switch");
+
+        unsafe {
+            switch_context(
+                proc_a_sp_ptr,
+                proc_b_sp_ptr
+            );
+        }
+
+        delay()
     }
 }
 
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+fn proc_b_entry() {
+    println!("starting process B");
+    loop {
+        print!("🐕");
+        let proc_a_pid = PROC_A.lock().expect("should be initialised");
+        let proc_b_pid = PROC_B.lock().expect("should be initialised");
 
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
+        let (proc_a_sp_ptr, proc_b_sp_ptr) = PROCS
+        .get_disjoint_sp_ptrs(proc_a_pid, proc_b_pid)
+        .expect("failed to get stack pointers for context switch");
 
-    proc_a = create_process((uint32_t) proc_a_entry);
-    proc_b = create_process((uint32_t) proc_b_entry);
+        unsafe {
+            switch_context(
+                proc_b_sp_ptr,
+                proc_a_sp_ptr
+            );
+        }
+
+        delay()
+    }
+}
+
+#[unsafe(no_mangle)]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    write_csr!("stvec", kernel_entry as usize);
+
+    common::println!("Hello World! 🦀");
+
+    PROC_A.lock().get_or_insert_with(|| {
+        create_process(proc_a_entry as usize)
+    });
+    PROC_B.lock().get_or_insert_with(|| {
+        create_process(proc_b_entry as usize)
+    });
     proc_a_entry();
 
-    PANIC("unreachable here!");
+    panic!("booted!");
 }
 ```
-
-The `proc_a_entry` function and `proc_b_entry` function are the entry points for Process A and Process B respectively. After displaying a single character using the `putchar` function, they switch context to the other process using the `switch_context` function.
+The `proc_a_entry` function and `proc_b_entry` function are the entry points for Process A and Process B respectively. After displaying a single character using the `println!` macro, they switch context to the other process using the `switch_context` function.
 
 `delay` function implements a busy wait to prevent the character output from becoming too fast, which would make your terminal unresponsive. `nop` instruction is a "do nothing" instruction. It is added to prevent compiler optimization from removing the loop.
 
-Now, let's try! The startup messages will be displayed once each, and then "ABABAB..." lasts forever:
+Now, let's try! The startup messages will be displayed once each, and then "🐕🐈🐕🐈🐕..." lasts forever:
 
 ```
 $ ./run.sh
-
+Hello World! 🦀
 starting process A
-Astarting process B
-BABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAQE
+🐈starting process B
+🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈QE
 ```
 
 ## Scheduler
