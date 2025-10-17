@@ -114,7 +114,9 @@ The `naked` attribute tells the compiler not to generate any other code than the
 >
 > Callee/Caller saved registers are defined in [Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf). Compilers generate code based on this convention.
 
-Next, let's implement the process initialization function, `create_process`. It takes the entry point as a parameter, and returns the `pid` of the created `Process` struct:
+Next, let's implement the process initialization function, `create_process`. It takes the entry point as a parameter, and returns the `pid` of the created `Process` struct.
+
+First we create an array of processes protected by a SpinLock and `PROCS`, and add some helper functions. Then we use `PROCS` when creating a new process:
 
 ```rust [kernel/src/process.rs]
 use crate::spinlock::SpinLock;
@@ -143,11 +145,12 @@ impl Procs {
     }
 }
 
-// Optional - but vital for debugging if `switch_context` isn't working.
+// Optional - but vital for debugging if you want to print the contents of PROCS.
 impl fmt::Display for Procs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let procs = PROCS.0.lock();
         for (i, process) in procs.iter().enumerate() {
+            write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
             writeln!(f, "PROC[{i}]")?;
             write!(f, "PID: {} ", process.pid)?;
             write!(f, "SP: {:x?} ", process.sp)?;
