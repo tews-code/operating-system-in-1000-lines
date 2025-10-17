@@ -18,10 +18,12 @@ mod entry;
 mod panic;
 mod process;
 mod sbi;
+mod scheduler;
 mod spinlock;
 
 use crate::entry::kernel_entry;
-use crate::process::{create_process, switch_context, PROCS};
+use crate::process::create_process;
+use crate::scheduler::yield_now;
 use crate::spinlock::SpinLock;
 
 
@@ -45,21 +47,7 @@ fn proc_a_entry() {
     println!("starting process A");
     loop {
         print!("🐈");
-
-        let proc_a_pid = PROC_A.lock().expect("should be initialised");
-        let proc_b_pid = PROC_B.lock().expect("should be initialised");
-
-        let (proc_a_sp_ptr, proc_b_sp_ptr) = PROCS
-            .get_disjoint_sp_ptrs(proc_a_pid, proc_b_pid)
-            .expect("failed to get stack pointers for context switch");
-
-        unsafe {
-            switch_context(
-                proc_a_sp_ptr,
-                proc_b_sp_ptr
-            );
-        }
-
+        yield_now();
         delay()
     }
 }
@@ -68,20 +56,7 @@ fn proc_b_entry() {
     println!("starting process B");
     loop {
         print!("🐕");
-        let proc_a_pid = PROC_A.lock().expect("should be initialised");
-        let proc_b_pid = PROC_B.lock().expect("should be initialised");
-
-        let (proc_a_sp_ptr, proc_b_sp_ptr) = PROCS
-        .get_disjoint_sp_ptrs(proc_a_pid, proc_b_pid)
-        .expect("failed to get stack pointers for context switch");
-
-        unsafe {
-            switch_context(
-                proc_b_sp_ptr,
-                proc_a_sp_ptr
-            );
-        }
-
+        yield_now();
         delay()
     }
 }
@@ -107,11 +82,9 @@ fn kernel_main() -> ! {
         create_process(proc_b_entry as usize)
     });
 
-    // common::println!("{}", PROCS);
+    yield_now();
 
-    proc_a_entry();
-
-    panic!("booted!");
+    panic!("switched to idle process");
 }
 
 #[unsafe(link_section = ".text.boot")]

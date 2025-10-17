@@ -6,7 +6,7 @@ use core::fmt;
 use crate::address::VAddr;
 use crate::spinlock::SpinLock;
 
-const PROCS_MAX: usize = 8;    // Maximum number of processes
+pub const PROCS_MAX: usize = 8;    // Maximum number of processes
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum State {
@@ -17,7 +17,7 @@ pub enum State {
 #[derive(Copy, Clone)]
 pub struct Process {
     pub pid: usize,            // Process ID
-    state: State,              // Process state: Unused or Runnable
+    pub state: State,              // Process state: Unused or Runnable
     pub sp: VAddr,             // Stack pointer
     stack: [u8; 8192],         // Kernel stack
 }
@@ -40,6 +40,10 @@ impl Procs {
         Self(
             SpinLock::new([Process::empty(); PROCS_MAX])
         )
+    }
+
+    pub fn index(&self, pid: usize) -> Option<usize> {
+        self.0.lock().iter().position(|p| p.pid == pid)
     }
 
     pub fn get_disjoint_sp_ptrs(&self, pid_a: usize, pid_b: usize) -> Option<(*mut usize, *mut usize)> {

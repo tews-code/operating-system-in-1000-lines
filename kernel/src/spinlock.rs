@@ -21,9 +21,13 @@ impl<T> SpinLock<T> {
     }
 
     pub fn lock(&self) -> Guard<'_, T> {
+        // let mut i = 0;
         while self.locked.swap(true, Acquire) {
             core::hint::spin_loop();
-            crate::print!(".");
+            // i += 1;
+            // if i % 300 == 0 {
+            //     crate::print!(".");
+            // }
         }
         Guard { lock: self }
     }
