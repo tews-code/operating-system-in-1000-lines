@@ -311,63 +311,129 @@ starting process A
 
 In the previous experiment, we directly called the `switch_context` function to specify the "next process to execute". However, this method becomes complicated when determining which process to switch to next as the number of processes increases. To solve the issue, let's implement a *"scheduler"*, a kernel program which decides the next process.
 
-The following `yield` function is the implementation of the scheduler:
+The following `yield_now` function is the implementation of the scheduler:
 
 > [!TIP]
 >
 > The word "yield" is often used as the name for an API which allows giving up the CPU to another process voluntarily.
 
-```c [kernel.c]
-struct process *current_proc; // Currently running process
-struct process *idle_proc;    // Idle process
+```rust [kernel/src/scheduler.rs]
+//! Round-robin scheduler
 
-void yield(void) {
-    // Search for a runnable process
-    struct process *next = idle_proc;
-    for (int i = 0; i < PROCS_MAX; i++) {
-        struct process *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
-        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
-            next = proc;
-            break;
+use crate::process::{create_process, PROCS, PROCS_MAX, State, switch_context};
+use crate::spinlock::SpinLock;
+
+
+static IDLE_PROC: SpinLock<Option<usize>> = SpinLock::new(None);    // Idle process
+static CURRENT_PROC: SpinLock<Option<usize>> = SpinLock::new(None); // Currently running process
+const IDLE_PID: usize = 0; // idle
+
+pub fn yield_now() {
+    // Initialse IDLE_PROC if not yet initialised
+    IDLE_PROC.lock().get_or_insert_with(|| {
+            let idle_pid = create_process(0);
+            if let Some(p) = PROCS.0.lock().iter_mut()
+                .find(|p| p.pid == idle_pid) {
+                    p.pid = IDLE_PID;
+                }
+            *CURRENT_PROC.lock() = Some(IDLE_PID);
+            IDLE_PID
         }
-    }
+    );
+
+    let idle_pid = IDLE_PROC.lock()
+        .expect("IDLE_PROC initialised before use");
+    let current_pid = CURRENT_PROC.lock()
+        .expect("CURRENT_PROC initialised before use");
+
+    // Search for a runnable process
+    let next_pid = {
+        let current_index = PROCS.index(current_pid)
+            .expect("current process PID should have an index");
+        PROCS.0.lock().iter()
+            .cycle()
+            .skip(current_index + 1)
+            .take(PROCS_MAX)
+            .find(|p| p.state == State::Runnable && p.pid != idle_pid)
+            .map(|p| p.pid)
+            .unwrap_or_else(|| idle_pid)
+    };
 
     // If there's no runnable process other than the current one, return and continue processing
-    if (next == current_proc)
+    if next_pid == current_pid {
         return;
+    }
 
     // Context switch
-    struct process *prev = current_proc;
-    current_proc = next;
-    switch_context(&prev->sp, &next->sp);
+    *CURRENT_PROC.lock() = Some(next_pid);
+    let (current_sp_ptr, next_sp_ptr) = PROCS
+        .get_disjoint_sp_ptrs(current_pid, next_pid)
+        .expect("failed to get stack pointers for context switch");
+    unsafe {
+        switch_context(current_sp_ptr, next_sp_ptr);
+    }
 }
 ```
+Here, we introduce two global variables. `CURRENT_PROC` points to the currently running process. `IDLE_PROC` refers to the idle process, which is "the process to run when there are no runnable processes". The `IDLE_PROC` is created on initialisation as a process with process ID `0`. 
 
-Here, we introduce two global variables. `current_proc` points to the currently running process. `idle_proc` refers to the idle process, which is "the process to run when there are no runnable processes". The `idle_proc` is created at startup as a process with process ID `0`, as shown below:
+The key point of this initialization process is `*CURRENT_PROC.lock() = Some(IDLE_PID);`. This ensures that the execution context of the boot process is saved and restored as that of the idle process. During the first call to the `yield_now` function, it switches from the idle process to process A, and when switching back to the idle process, it behaves as if returning from this `yield_now` function call.
 
-```c [kernel.c] {8-10,15-16}
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+Update `main.rs` to make use of our new scheduler. Modify `proc_a_entry` and `proc_b_entry` as follows to call the `yield_now` function instead of directly calling the `switch_context` function:
+```rust [kernel/src/main.rs]
+...
+mod scheduler;
+...
+use crate::process::create_process;
+use crate::scheduler::yield_now;
+...
+static PROC_A: SpinLock<Option<usize>> = SpinLock::new(None);
+static PROC_B: SpinLock<Option<usize>> = SpinLock::new(None);
 
-    printf("\n\n");
-
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
-
-    idle_proc = create_process((uint32_t) NULL);
-    idle_proc->pid = 0; // idle
-    current_proc = idle_proc;
-
-    proc_a = create_process((uint32_t) proc_a_entry);
-    proc_b = create_process((uint32_t) proc_b_entry);
-
-    yield();
-    PANIC("switched to idle process");
+fn proc_a_entry() {
+    println!("starting process A");
+    loop {
+        print!("🐈");
+        yield_now();
+        delay()
+    }
 }
+
+fn proc_b_entry() {
+    println!("starting process B");
+    loop {
+        print!("🐕");
+        yield_now();
+        delay()
+    }
+}
+
+
+#[unsafe(no_mangle)]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    write_csr!("stvec", kernel_entry as usize);
+
+    common::println!("Hello World! 🦀");
+
+    PROC_A.lock().get_or_insert_with(|| {
+        create_process(proc_a_entry as usize)
+    });
+    PROC_B.lock().get_or_insert_with(|| {
+        create_process(proc_b_entry as usize)
+    });
+
+    yield_now();
+
+    panic!("switched to idle process");
+}
+...
 ```
-
-The key point of this initialization process is `current_proc = idle_proc`. This ensures that the execution context of the boot process is saved and restored as that of the idle process. During the first call to the `yield` function, it switches from the idle process to process A, and when switching back to the idle process, it behaves as if returning from this `yield` function call.
-
-Lastly, modify `proc_a_entry` and `proc_b_entry` as follows to call the `yield` function instead of directly calling the `switch_context` function:
 
 ```c [kernel.c] {5,13}
 void proc_a_entry(void) {
@@ -387,7 +453,7 @@ void proc_b_entry(void) {
 }
 ```
 
-If "A" and "B" are printed as before, it works perfectly!
+If "🐈" and "🐕" are printed as before, it works perfectly!
 
 ## Changes in the exception handler
 
@@ -396,75 +462,131 @@ In the exception handler, it saves the execution state onto the stack. However, 
 First, store a pointer to the bottom of the kernel stack for the currently executing process in the `sscratch` register during process switching.
 We will read this during the exception handler (see [Appendix: Why do we reset the stack pointer?](#appendix-why-do-we-reset-the-stack-pointer) for more explanation).
 
-```c [kernel.c] {4-8}
-void yield(void) {
-    /* omitted */
+Let's start by creating a helper function to give us a pointer to the stack top of any process:
 
-    __asm__ __volatile__(
-        "csrw sscratch, %[sscratch]\n"
-        :
-        : [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
-    );
-
-    // Context switch
-    struct process *prev = current_proc;
-    current_proc = next;
-    switch_context(&prev->sp, &next->sp);
+```rust [kernel/src/process.rs]
+...
+impl Procs {
+    ...
+    pub fn stack_top_ptr(&self, pid: usize) -> *const u8 {
+        let procs = self.0.lock();
+        let p = procs.iter()
+            .find(|p| p.pid == pid)
+            .expect("should find process");
+        // Safety: The process stack pointer is guaranteed to be:
+        // - Properly aligned for the target architecture
+        // - Lifetime of process is static
+        // - stack.len() won't overflow when added to the base pointer
+        unsafe { p.stack.as_ptr().add(p.stack.len()) }
+    }
 }
 ```
+Then use this helper function to write the stack top to the scratch register:
 
-Since the stack pointer extends towards lower addresses, we set the address at the `sizeof(next->stack)`th byte as the initial value of the kernel stack.
+```rust [kernel/src/scheduler.rs]
+/* Omitted */
+pub fn yield_now() {
+    ...
+    write_csr!("sscratch", PROCS.stack_top_ptr(next_pid));
+
+    // Context switch
+    *CURRENT_PROC.lock() = Some(next_pid);
+    let (current_sp_ptr, next_sp_ptr) = PROCS
+        .get_disjoint_sp_ptrs(current_pid, next_pid)
+        .expect("failed to get stack pointers for context switch");
+    unsafe {
+        switch_context(current_sp_ptr, next_sp_ptr);
+    }
+}
+```
+Since the stack pointer extends towards lower addresses, we set the address at one past the end of the stack as the initial value of the kernel stack.
 
 The modifications to the exception handler are as follows:
 
-```c [kernel.c] {3-4,38,42-44}
-void kernel_entry(void) {
-    __asm__ __volatile__(
+```rust [kernel/src/entry.rs]
+#[unsafe(naked)]
+pub unsafe extern "C" fn kernel_entry() {
+    naked_asm!(
+        ".align 2",
         // Retrieve the kernel stack of the running process from sscratch.
-        "csrrw sp, sscratch, sp\n"
+        "csrrw sp, sscratch, sp",
+        "addi sp, sp, -4 * 31",
+        "sw ra,  4 * 0(sp)",
+        "sw gp,  4 * 1(sp)",
+        "sw tp,  4 * 2(sp)",
+        "sw t0,  4 * 3(sp)",
+        "sw t1,  4 * 4(sp)",
+        "sw t2,  4 * 5(sp)",
+        "sw t3,  4 * 6(sp)",
+        "sw t4,  4 * 7(sp)",
+        "sw t5,  4 * 8(sp)",
+        "sw t6,  4 * 9(sp)",
+        "sw a0,  4 * 10(sp)",
+        "sw a1,  4 * 11(sp)",
+        "sw a2,  4 * 12(sp)",
+        "sw a3,  4 * 13(sp)",
+        "sw a4,  4 * 14(sp)",
+        "sw a5,  4 * 15(sp)",
+        "sw a6,  4 * 16(sp)",
+        "sw a7,  4 * 17(sp)",
+        "sw s0,  4 * 18(sp)",
+        "sw s1,  4 * 19(sp)",
+        "sw s2,  4 * 20(sp)",
+        "sw s3,  4 * 21(sp)",
+        "sw s4,  4 * 22(sp)",
+        "sw s5,  4 * 23(sp)",
+        "sw s6,  4 * 24(sp)",
+        "sw s7,  4 * 25(sp)",
+        "sw s8,  4 * 26(sp)",
+        "sw s9,  4 * 27(sp)",
+        "sw s10, 4 * 28(sp)",
+        "sw s11, 4 * 29(sp)",
 
-        "addi sp, sp, -4 * 31\n"
-        "sw ra,  4 * 0(sp)\n"
-        "sw gp,  4 * 1(sp)\n"
-        "sw tp,  4 * 2(sp)\n"
-        "sw t0,  4 * 3(sp)\n"
-        "sw t1,  4 * 4(sp)\n"
-        "sw t2,  4 * 5(sp)\n"
-        "sw t3,  4 * 6(sp)\n"
-        "sw t4,  4 * 7(sp)\n"
-        "sw t5,  4 * 8(sp)\n"
-        "sw t6,  4 * 9(sp)\n"
-        "sw a0,  4 * 10(sp)\n"
-        "sw a1,  4 * 11(sp)\n"
-        "sw a2,  4 * 12(sp)\n"
-        "sw a3,  4 * 13(sp)\n"
-        "sw a4,  4 * 14(sp)\n"
-        "sw a5,  4 * 15(sp)\n"
-        "sw a6,  4 * 16(sp)\n"
-        "sw a7,  4 * 17(sp)\n"
-        "sw s0,  4 * 18(sp)\n"
-        "sw s1,  4 * 19(sp)\n"
-        "sw s2,  4 * 20(sp)\n"
-        "sw s3,  4 * 21(sp)\n"
-        "sw s4,  4 * 22(sp)\n"
-        "sw s5,  4 * 23(sp)\n"
-        "sw s6,  4 * 24(sp)\n"
-        "sw s7,  4 * 25(sp)\n"
-        "sw s8,  4 * 26(sp)\n"
-        "sw s9,  4 * 27(sp)\n"
-        "sw s10, 4 * 28(sp)\n"
-        "sw s11, 4 * 29(sp)\n"
-
-        // Retrieve and save the sp at the time of exception.
-        "csrr a0, sscratch\n"
-        "sw a0,  4 * 30(sp)\n"
+        // Retrieve and save the sp at the time of exeception
+        "csrr a0, sscratch",
+        "sw a0, 4 * 30(sp)",
 
         // Reset the kernel stack.
-        "addi a0, sp, 4 * 31\n"
-        "csrw sscratch, a0\n"
+        "addi a0, sp, 4 * 31",
+        "csrw sscratch, a0",
 
-        "mv a0, sp\n"
-        "call handle_trap\n"
+        "mv a0, sp",
+        "call handle_trap",
+
+        "lw ra,  4 * 0(sp)",
+        "lw gp,  4 * 1(sp)",
+        "lw tp,  4 * 2(sp)",
+        "lw t0,  4 * 3(sp)",
+        "lw t1,  4 * 4(sp)",
+        "lw t2,  4 * 5(sp)",
+        "lw t3,  4 * 6(sp)",
+        "lw t4,  4 * 7(sp)",
+        "lw t5,  4 * 8(sp)",
+        "lw t6,  4 * 9(sp)",
+        "lw a0,  4 * 10(sp)",
+        "lw a1,  4 * 11(sp)",
+        "lw a2,  4 * 12(sp)",
+        "lw a3,  4 * 13(sp)",
+        "lw a4,  4 * 14(sp)",
+        "lw a5,  4 * 15(sp)",
+        "lw a6,  4 * 16(sp)",
+        "lw a7,  4 * 17(sp)",
+        "lw s0,  4 * 18(sp)",
+        "lw s1,  4 * 19(sp)",
+        "lw s2,  4 * 20(sp)",
+        "lw s3,  4 * 21(sp)",
+        "lw s4,  4 * 22(sp)",
+        "lw s5,  4 * 23(sp)",
+        "lw s6,  4 * 24(sp)",
+        "lw s7,  4 * 25(sp)",
+        "lw s8,  4 * 26(sp)",
+        "lw s9,  4 * 27(sp)",
+        "lw s10, 4 * 28(sp)",
+        "lw s11, 4 * 29(sp)",
+        "lw sp,  4 * 30(sp)",
+        "sret"
+    )
+}
 ```
 
 The first `csrrw` instruction is a swap operation in short:
