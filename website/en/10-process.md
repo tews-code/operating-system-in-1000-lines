@@ -116,7 +116,7 @@ The `naked` attribute tells the compiler not to generate any other code than the
 
 Next, let's implement the process initialization function, `create_process`. It takes the entry point as a parameter, and returns the `pid` of the created `Process` struct.
 
-First we create an array of processes protected by a SpinLock and `PROCS`, and add some helper functions. Then we use `PROCS` when creating a new process:
+First we create a static array of processes protected by a SpinLock called `PROCS`, and add some helper functions. Then we use `PROCS` when creating a new process:
 
 ```rust [kernel/src/process.rs]
 use crate::spinlock::SpinLock;
@@ -164,7 +164,6 @@ impl fmt::Display for Procs {
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
 pub fn create_process(pc: usize) -> usize {
-
     let mut procs = PROCS.0.lock();
 
     // Find an unused process control structure.
