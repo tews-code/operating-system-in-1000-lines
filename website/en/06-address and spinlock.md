@@ -94,7 +94,7 @@ We will create a spin lock to protect shared global resources. Create a new file
 
 > [!TIP]
 >
-> The spin lock is taken directly from the excellent (Rust Atomics and Locks)[https://marabos.nl/atomics/building-spinlock.html] by Mara Bos.
+> The spin lock is taken directly from the excellent [Rust Atomics and Locks](https://marabos.nl/atomics/building-spinlock.html) by Mara Bos.
 
 ```rust [kernel/src/spinlock.rs]
 //! Spinlock for os1k
