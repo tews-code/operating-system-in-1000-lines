@@ -1,6 +1,6 @@
 # Address Module
 
-In this chapter, let's implement basic address types and memory operations.
+In this chapter, let's implement basic address types a spin lock.
 
 > [!TIP]
 >
@@ -88,4 +88,80 @@ We also create an equivalent `struct VAddr`, with an additional helper method `f
 
 We also have a function `is_aligned` which will tell us if a `usize` is aligned to any particular power of two.
 
+# Spin lock
 
+We will create a spin lock to protect shared global resources. Create a new file `spinlock.rs` and add this as a module in `main.rs`.
+
+> [!TIP]
+>
+> The spin lock is taken directly from the excellent (Rust Atomics and Locks)[https://marabos.nl/atomics/building-spinlock.html] by Mara Bos.
+
+```rust [kernel/src/spinlock.rs]
+//! Spinlock for os1k
+
+use core::cell::UnsafeCell;
+use core::ops::{Deref, DerefMut};
+use core::sync::atomic::{AtomicBool, Ordering::{Acquire, Release}};
+
+#[derive(Debug)]
+pub struct SpinLock<T> {
+    locked: AtomicBool,
+    value: UnsafeCell<T>,
+}
+
+unsafe impl<T> Sync for SpinLock<T> where T: Send {}
+
+impl<T> SpinLock<T> {
+    pub const fn new(value: T) -> Self {
+        Self {
+            locked: AtomicBool::new(false),
+            value: UnsafeCell::new(value),
+        }
+    }
+
+    pub fn lock(&self) -> Guard<'_, T> {
+        while self.locked.swap(true, Acquire) {
+            core::hint::spin_loop();
+            // crate::print!(".");
+            panic!("locked");
+        }
+        Guard { lock: self }
+    }
+}
+
+#[derive(Debug)]
+pub struct Guard<'a, T> {
+    lock: &'a SpinLock<T>,
+}
+
+impl<T> Deref for Guard<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        //Safety: The existance of this guard guarantees exclusive lock
+        unsafe { &*self.lock.value.get() }
+    }
+}
+
+impl<T> DerefMut for Guard<'_, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        //Safety: The existance of this guard guarantees exclusive lock
+        unsafe { &mut *self.lock.value.get() }
+    }
+}
+
+impl<T> Drop for Guard<'_, T> {
+    fn drop(&mut self) {
+        self.lock.locked.store(false, Release);
+    }
+}
+```
+
+The spinlock allows us to avoid using `static mut` global variables. Instead, we wrap shared global variables in our `SpinLock`, which has an atomic boolean that indicates whether the it is locked, and an UnsafeCell for interior mutability. 
+
+to lock the spinlock, we set the boolean to `true` with _load_/_Acquire_ memory ordering, and unlock using _store_/_Release_ ordering. This creates a _happens_before_ relationship between taking a new lock and the previous lock. 
+
+To make sure we are exclusively changing the locked value, we use a "guard" which holds the spinlock, and which we can only get by successfully locking.
+
+Working with the guard directly is awkward, so we implement the `Deref` and `DerefMut` traits, which will perform an automatic deferencing, allowing us to treat the guard as if it were the lock. 
+
+We also implement `Drop` on the guard to unlock the lock. That avoids us having to explicitly drop the lock (although we can do so if we want to using `drop(lock_name)`.
