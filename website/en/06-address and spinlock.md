@@ -122,8 +122,6 @@ impl<T> SpinLock<T> {
     pub fn lock(&self) -> Guard<'_, T> {
         while self.locked.swap(true, Acquire) {
             core::hint::spin_loop();
-            // crate::print!(".");
-            panic!("locked");
         }
         Guard { lock: self }
     }
@@ -158,7 +156,7 @@ impl<T> Drop for Guard<'_, T> {
 
 The spinlock allows us to avoid using `static mut` global variables. Instead, we wrap shared global variables in our `SpinLock`, which has an atomic boolean that indicates whether the it is locked, and an UnsafeCell for interior mutability. 
 
-to lock the spinlock, we set the boolean to `true` with _load_/_Acquire_ memory ordering, and unlock using _store_/_Release_ ordering. This creates a _happens_before_ relationship between taking a new lock and the previous lock. 
+To lock the spinlock, we set the boolean to `true` with _load_/_Acquire_ memory ordering, and unlock using _store_/_Release_ ordering. This creates a _happens_ _before_ relationship between taking a new lock and the previous lock. 
 
 To make sure we are exclusively changing the locked value, we use a "guard" which holds the spinlock, and which we can only get by successfully locking.
 
