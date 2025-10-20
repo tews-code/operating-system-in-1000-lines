@@ -16,7 +16,7 @@ use crate::println;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("⚠ Panic: {}", info);
+    println!("⚠️ Panic: {}", info);
 
     loop {
         unsafe {asm!("wfi")};
