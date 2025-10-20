@@ -83,7 +83,7 @@ SECTIONS {
 
         . = ALIGN(16);
         . += 64 * 1024; /* 64KB */
-        __stack_top = .;
+        __user_stack_top = .;
 
        ASSERT(. < 0x1800000, "too large executable");
     }
@@ -158,6 +158,11 @@ Create a subfolder `user/src/bin` and add the file `shell.rs`.
 #![no_std]
 #![no_main]
 
+use core::arch::asm;
+
+#[expect(unused_imports)]
+use user;
+
 #[unsafe(no_mangle)]
 fn main() {
     loop {}
@@ -166,32 +171,110 @@ fn main() {
 
 ## Building the application
 
-Applications will be built separately from the kernel. Let's create a new script (`run.sh`) to build the application:
+Applications will be built separately from the kernel, converted to a "relocatable ELF" and linked directly to our kernel binary.
 
-```bash [run.sh] {1,3-6,10}
-OBJCOPY=/opt/homebrew/opt/llvm/bin/llvm-objcopy
+First, we need to add this to our kernel build script at `kernel/build.rs`:
 
-# Build the shell (application)
-$CC $CFLAGS -Wl,-Tuser.ld -Wl,-Map=shell.map -o shell.elf shell.c user.c common.c
-$OBJCOPY --set-section-flags .bss=alloc,contents -O binary shell.elf shell.bin
-$OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o
+```rust [kernel/build.rs] {9-10}
+fn main() {
+    // Add rustc linker arguments
+    println!("cargo:rustc-link-arg=--Map=kernel/kernel.map");
+    println!("cargo:rustc-link-arg=--script=kernel/kernel.ld");
 
-# Build the kernel
-$CC $CFLAGS -Wl,-Tkernel.ld -Wl,-Map=kernel.map -o kernel.elf \
-    kernel.c common.c shell.bin.o
+    // Tell cargo to rerun if the linker script changes
+    println!("cargo:rerun-if-changed=kernel.ld");
+
+    // Link the shell binary
+    println!("cargo:rustc-link-arg={}", "shell.bin.o");
+}
+```
+and at the same time, let's tell Cargo which binary is our default by editing `kernel/Cargo.toml`:
+
+```toml [kernel/Cargo.toml] {5}
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+default-run = "kernel"
+
+[[bin]]
+name = "kernel"
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+common = { workspace = true }
 ```
 
-The first `$CC` call is very similar to the kernel build script. Compile C files and link them with the `user.ld` linker script.
+Let's create a new script (`os1k.sh`) to control building the application, converting it to a relocatable binary, and then building and running the kernel:
 
+```bash [os1k.sh]
+#!/bin/bash
+set -xue
+
+TARGET=riscv32imac-unknown-none-elf
+TARGET_DIR=target/$TARGET/debug/
+OBJCOPY=llvm-objcopy
+CWD=$(pwd)
+
+echo $CWD;
+
+if [ $1 == "clean" ]; then
+    cargo clean;
+fi
+
+
+if [ $1 == "check" ]; then
+    cargo check -p user --bin shell;
+    cargo build -p user --bin shell;
+    cd $TARGET_DIR;
+    $OBJCOPY --set-section-flags=.bss=alloc,contents \
+        --output-target=binary \
+        shell shell.bin;
+    $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
+    file shell.bin.o;
+    cp shell.bin.o $CWD;
+    cd $CWD;
+    cargo check --bin kernel;
+fi
+
+if [ $1 == "build" ]; then
+    cargo build -p user --bin shell;
+    cd $TARGET_DIR;
+    $OBJCOPY --set-section-flags=.bss=alloc,contents \
+        --output-target=binary \
+        shell shell.bin;
+    $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
+    file shell.bin.o;
+    cp shell.bin.o $CWD;
+    cd $CWD;
+    cargo build --bin kernel;
+fi
+
+if [ $1 == "run" ]; then
+    if [ -f $TARGET/shell.bin.o ]; then
+        cargo run;
+    else
+        ./$0 build;
+        cargo run;
+    fi
+fi
+
+if [ $1 == "cleanandrun" ]; then
+    ./$0 clean;
+    cargo run;
+fi
+```
 The first `$OBJCOPY` command converts the executable file (in ELF format) to raw binary format. A raw binary is the actual content that will be expanded in memory from the base address (in this case, `0x1000000`). The OS can prepare the application in memory simply by copying the contents of the raw binary. Common OSes use formats like ELF, where memory contents and their mapping information are separate, but in this book, we'll use raw binary for simplicity.
 
-The second `$OBJCOPY` command converts the raw binary execution image into a format that can be embedded in C language. Let's take a look at what's inside using the `llvm-nm` command:
+The second `$OBJCOPY` command converts the raw binary execution image into a format that can be embedded in our Rust kernel binary. Let's take a look at what's inside using the `llvm-nm` command:
 
 ```
 $ llvm-nm shell.bin.o
+00010020 D _binary_shell_bin_end
+00010020 A _binary_shell_bin_size
 00000000 D _binary_shell_bin_start
-00010260 D _binary_shell_bin_end
-00010260 A _binary_shell_bin_size
 ```
 
 The prefix `_binary_` is followed by the file name, and then `start`, `end`, and `size`. These are symbols that indicate the beginning, end, and size of the execution image, respectively. In practice, they are used as follows:
@@ -219,44 +302,43 @@ char _binary_shell_bin_start[] = "<shell.bin contents here>";
 $ llvm-nm shell.bin.o | grep _binary_shell_bin_size
 00010454 A _binary_shell_bin_size
 
-$ ls -al shell.bin   ← note: do not confuse with shell.bin.o!
--rwxr-xr-x 1 seiya staff 66644 Oct 24 13:35 shell.bin
+$ ls -al target/riscv32imac-unknown-none-elf/debug/shell.bin ← note: do not confuse with shell.bin.o!
+-rwxr-xr-x. 1 65568 Oct 20 17:45 target/riscv32imac-unknown-none-elf/debug/shell.bin
 
-$ python3 -c 'print(0x10454)'
-66644
+$ python3 -c 'print(0x10020)'
+65568
 ```
 
-The first column in the `llvm-nm` output is the *address* of the symbol. This `10454` hexadecimal number matches the file size, but this is not a coincidence. Generally, the values of each address in a `.o` file are determined by the linker. However, `_binary_shell_bin_size` is special.
+The first column in the `llvm-nm` output is the *address* of the symbol. This `10020` hexadecimal number matches the file size, but this is not a coincidence. Generally, the values of each address in a `.o` file are determined by the linker. However, `_binary_shell_bin_size` is special.
 
 The `A` in the second column indicates that the address of `_binary_shell_bin_size` is a type of symbol (absolute) that should not be changed by the linker. That is, it embeds the file size as an address.
 
 By defining it as an array of an arbitrary type like `char _binary_shell_bin_size[]`, `_binary_shell_bin_size` will be treated as a pointer storing its *address*. However, since we're embedding the file size as an address here, casting it will result in the file size. This is a common trick (or a dirty hack) that exploits the object file format.
 
-Lastly, we've added `shell.bin.o` to the `clang` arguments in the kernel compiling. It embeds the first application's executable into the kernel image.
+Lastly, we've added `shell.bin.o` to the `build.rs` script in the kernel compiling. It embeds the first application's executable into the kernel image.
 
 ## Disassemble the executable
 
 In disassembly, we can see that the `.text.start` section is placed at the beginning of the executable file. The `start` function should be placed at `0x1000000` as follows:
 
 ```
-$ llvm-objdump -d shell.elf
+$ lllvm-objdump -d target/riscv32imac-unknown-none-elf/debug/shell
 
-shell.elf:	file format elf32-littleriscv
+target/riscv32imac-unknown-none-elf/debug/shell:        file format elf32-littleriscv
 
 Disassembly of section .text:
 
 01000000 <start>:
- 1000000: 37 05 01 01  	lui	a0, 4112
- 1000004: 13 05 05 26  	addi	a0, a0, 608
- 1000008: 2a 81        	mv	sp, a0
- 100000a: 19 20        	jal	0x1000010 <main>
- 100000c: 29 20        	jal	0x1000016 <exit>
- 100000e: 00 00        	unimp
+ 1000000: 00010117      auipc   sp, 0x10
+ 1000004: 02010113      addi    sp, sp, 0x20
+ 1000008: 00000097      auipc   ra, 0x0
+ 100000c: 010080e7      jalr    0x10(ra) <main>
+ 1000010: 00000097      auipc   ra, 0x0
+ 1000014: 00a080e7      jalr    0xa(ra) <exit>
 
-01000010 <main>:
- 1000010: 01 a0        	j	0x1000010 <main>
- 1000012: 00 00        	unimp
+01000018 <main>:
+ 1000018: a001          j       0x1000018 <main>
 
-01000016 <exit>:
- 1000016: 01 a0        	j	0x1000016 <exit>
+0100001a <exit>:
+ 100001a: a001          j       0x100001a <exit>
 ```
