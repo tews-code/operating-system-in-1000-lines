@@ -1,6 +1,53 @@
 # Application
 
-In this chapter, we'll prepare the first application executable to run on our kernel.
+In this chapter, we'll prepare the first application executable to run on our kernel. First let's add a new package to our workspace, which will be the user library for applications.
+
+```
+$ cargo new --lib user
+    Creating library `user` package
+      Adding `user` as member of workspace
+```
+
+Now add `user` as a dependency in our workspace by edit the project root Cargo.toml: 
+
+```
+[workspace]
+members = ["common","kernel", "user"]
+resolver = "3"
+
+[workspace.dependencies]
+common = { path = "common" }
+user = { path = "user" }
+```
+as well as adding `common` as a dependency for `user` in the `user/Cargo.toml`:
+```toml [user/Cargo.toml]
+[package]
+name = "user"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+test = false
+doctest = false
+bench = false
+
+[dependencies]
+common = { workspace = true }
+```
+Add our cross-compile target into `user/.cargo/config.toml`: 
+
+```toml [user/.cargo/config.toml]
+[build]
+target="riscv32i-unknown-none-elf"
+```
+and add a build script to make use of a linker script and to provide a linker map for user applications in `user/build.rs`:
+
+```rust [user/build.rs]
+fn main() {
+    println!("cargo:rustc-link-arg=--Map=user/user.map");
+    println!("cargo:rustc-link-arg=--script=user/user.ld");
+}
+```
 
 ## Memory layout
 
@@ -8,7 +55,7 @@ In the previous chapter, we implemented isolated virtual address spaces using th
 
 Create a new linker script (`user.ld`) that defines where to place the application in memory:
 
-```ld [user.ld]
+```ld [user/user.ld]
 ENTRY(start)
 
 SECTIONS {
@@ -40,6 +87,8 @@ SECTIONS {
 
        ASSERT(. < 0x1800000, "too large executable");
     }
+
+    /DISCARD/ : { *(.eh_frame*) }
 }
 ```
 
@@ -49,38 +98,47 @@ It looks pretty much the same as the kernel's linker script, isn't it?  The key 
 
 ## Userland library
 
-Next, let's create a library for userland programs. For simplicity, we'll start with a minimal feature set to start the application:
+Next, let's create a library for userland programs. For simplicity, we'll start with a minimal feature set to start the application. Clear the Cargo example code, and add the following:
 
-```c [user.c]
-#include "user.h"
+```rust [user/src/lib.rs]
+//! User library for os1k
 
-extern char __stack_top[];
+#![no_std]
 
-__attribute__((noreturn)) void exit(void) {
-    for (;;);
+use core::arch::naked_asm;
+use core::panic::PanicInfo;
+
+pub use common::{print, println};
+
+#[panic_handler]
+pub fn panic(_panic: &PanicInfo) -> ! {
+    loop {}
 }
 
-void putchar(char ch) {
-    /* TODO */
+unsafe extern "C" {
+    static __user_stack_top: u8;
 }
 
-__attribute__((section(".text.start")))
-__attribute__((naked))
-void start(void) {
-    __asm__ __volatile__(
-        "mv sp, %[stack_top] \n"
-        "call main           \n"
-        "call exit           \n"
-        :: [stack_top] "r" (__stack_top)
-    );
+#[unsafe(no_mangle)]
+fn exit() -> ! {
+    loop {}
+}
+
+#[unsafe(link_section = ".text.start")]
+#[unsafe(no_mangle)]
+#[unsafe(naked)]
+unsafe extern "C" fn start() {
+    naked_asm!(
+        "la sp, {stack_top}",
+        "call main",
+        "call exit",
+        stack_top = sym __user_stack_top
+    )
 }
 ```
-
 The execution of the application starts from the `start` function. Similar to the kernel's boot process, it sets up the stack pointer and calls the application's `main` function.
 
 We prepare the `exit` function to terminate the application. However, for now, we'll just have it perform an infinite loop.
-
-Also, we define the `putchar` function that the `printf` function in `common.c` refers to. We'll implement this later.
 
 Unlike the kernel's initialization process, we don't clear the `.bss` section with zeros. This is because the kernel guarantees that it has already filled it with zeros (in the `alloc_pages` function).
 
@@ -88,25 +146,21 @@ Unlike the kernel's initialization process, we don't clear the `.bss` section wi
 >
 > Allocated memory regions are already filled with zeros in typical operating systems too. Otherwise, the memory may contain sensitive information (e.g. credentials) from other processes, and it could lead to a critical security issue.
 
-Lastly, prepare a header file (`user.h`) for the userland library:
-
-```c [user.h]
-#pragma once
-#include "common.h"
-
-__attribute__((noreturn)) void exit(void);
-void putchar(char ch);
-```
-
 ## First application
 
-It's time to create the first application! Unfortunately, we still don't have a way to display characters, we can't start with a "Hello, World!" program. Instead, we'll create a simple infinite loop:
+It's time to create the first application! Unfortunately, we still don't have a way to display characters, we can't start with a "Hello, World!" program. Instead, we'll create a simple infinite loop.
 
-```c [shell.c]
-#include "user.h"
+Create a subfolder `user/src/bin` and add the file `shell.rs`.
 
-void main(void) {
-    for (;;);
+```rust [user/src/bin/shell.rs]
+//! os1k shell
+
+#![no_std]
+#![no_main]
+
+#[unsafe(no_mangle)]
+fn main() {
+    loop {}
 }
 ```
 
