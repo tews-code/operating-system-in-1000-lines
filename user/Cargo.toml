@@ -1,15 +1,18 @@
 [package]
-name = "kernel"
+name = "user"
 version = "0.1.0"
 edition = "2024"
-default-run = "kernel"
+
+[lib]
+test = false
+doctest = false
+bench = false
 
 [[bin]]
-name = "kernel"
+name = "shell"
 test = false
 doctest = false
 bench = false
 
 [dependencies]
 common = { workspace = true }
-

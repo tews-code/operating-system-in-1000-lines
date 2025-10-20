@@ -1,6 +1,7 @@
 [workspace]
-members = ["common","kernel"]
+members = ["common","kernel", "user"]
 resolver = "3"
 
 [workspace.dependencies]
 common = { path = "common" }
+user = { path = "user" }

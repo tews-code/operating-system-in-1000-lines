@@ -60,7 +60,7 @@ pub fn yield_now() {
         let page_table = next.page_table.as_ref().expect("page_table should exist");
         // Double deref on page_table for both ref and Box.
         let page_table_addr = &**page_table as *const PageTable as usize;
-        let satp = SATP_SV32 | (page_table_addr);
+        let satp = SATP_SV32 | (page_table_addr / PAGE_SIZE);
         //Safety: sscratch points to the end of next.stack, which is a valid stack allocation.
         let sscratch = unsafe { next.stack.as_ptr().add(next.stack.len()) };
         (next_sp_ptr, current_sp_ptr, satp, sscratch)
