@@ -273,26 +273,6 @@ pub fn yield_now() {
 
 
 ```
-
-```c [kernel.c] {5-7,10-11}
-void yield(void) {
-    /* omitted */
-
-    __asm__ __volatile__(
-        "sfence.vma\n"
-        "csrw satp, %[satp]\n"
-        "sfence.vma\n"
-        "csrw sscratch, %[sscratch]\n"
-        :
-        // Don't forget the trailing comma!
-        : [satp] "r" (SATP_SV32 | ((uint32_t) next->page_table / PAGE_SIZE)),
-          [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
-    );
-
-    switch_context(&prev->sp, &next->sp);
-}
-```
-
 We can switch page tables by specifying the first-level page table in `satp`. Note that we divide by `PAGE_SIZE` because it's the physical page number.
 
 `sfence.vma` instructions added before and after setting the page table serve two purposes:
@@ -309,11 +289,11 @@ We can switch page tables by specifying the first-level page table in `satp`. No
 let's try it and see how it works!
 
 ```
-$ ./run.sh
-
+$ cargo run
+Hello World! 🦀
 starting process A
-Astarting process B
-BABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB
+🐈starting process B
+🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈🐕🐈QEMU: Terminated
 ```
 
 The output is exactly the same as in the previous chapter (context switching). There's no visible change even after enabling paging. To check if we've set up the page tables correctly, let's inspect it with QEMU monitor!
@@ -327,17 +307,22 @@ QEMU 8.0.2 monitor - type 'help' for more information
 (qemu) stop
 (qemu) info registers
  ...
- satp     80080253
+ satp     80080245
  ...
 ```
 
-You can see that `satp` is `0x80080253`. According to the specification (RISC-V Sv32 mode), interpreting this value gives us the first-level page table's starting physical address: `(0x80080253 & 0x3fffff) * 4096 = 0x80253000`.
+You can see that `satp` is `0x80080245`. According to the specification (RISC-V Sv32 mode), interpreting this value gives us the first-level page table's starting physical address: 
+
+```
+$ python -c "print(hex((0x80080245 & 0x3fffff) * 4096))"
+0x80245000
+```
 
 Next, let's inspect the contents of the first-level page table. We want to know the second-level page table corresponding to the virtual address `0x80200000`. QEMU provides commands to display memory contents (memory dump). `xp` command dumps memory at the specified physical address. Dump the 512th entry because `VPN[1] = 0x80200000 >> 22 = 512`. Since each entry is 4 bytes, we multiply by 4:
 
 ```
-(qemu) xp /x 0x80253000+512*4
-0000000080253800: 0x20095001
+(qemu) xp /x 0x80245000+512*4
+0000000080245800: 0x20091801
 ```
 
 The first column shows the physical address, and the subsequent columns show the memory values. We can see that some non-zero values are set. The `/x` option specifies hexadecimal display. Adding a number before `x` (e.g., `/1024x`) specifies the number of entries to display.
@@ -346,35 +331,32 @@ The first column shows the physical address, and the subsequent columns show the
 >
 > Using the `x` command instead of `xp` allows you to view the memory dump for a specified **virtual** address. This is useful when examining user space (application) memory, where virtual addresses do not match physical addresses, unlike in our kernel space.
 
-According to the specification, the second-level page table is located at `(0x20095000 >> 10) * 4096 = 0x80254000`. We again dump its 512th entry because `VPN[0] = (0x80200000 >> 12) & 0x3ff = 512`:
+According to the specification, the second-level page table is located at `(0x20095000 >> 10) * 4096 = 0x80246000`. We again dump its 512th entry because `VPN[0] = (0x80200000 >> 12) & 0x3ff = 512`:
 
 ```
-(qemu) xp /x 0x80254000+512*4
-0000000080254800: 0x200800cf
+(qemu) xp /x 0x80246000+512*4
+0000000080246800: 0x2008004f
 ```
 
-The value `0x200800cf` corresponds to the physical page number `0x200800cf >> 10 = 0x80200` (according to the specification, we ignore the lowest 10 bits, which contain permission flags).
+The value `0x2008004f` corresponds to the physical page number `0x2008004f >> 10 = 0x80200` (according to the specification, we ignore the lowest 10 bits, which contain permission flags).
 This means that the virtual address `0x80200000` is mapped to the physical address `0x80200000`, as we wanted!
 
 Let's also dump the entire first-level table (1024 entries):
 
 ```
-(qemu) xp /1024x 0x80253000
-0000000080254000: 0x00000000 0x00000000 0x00000000 0x00000000
-0000000080254010: 0x00000000 0x00000000 0x00000000 0x00000000
-0000000080254020: 0x00000000 0x00000000 0x00000000 0x00000000
-0000000080254030: 0x00000000 0x00000000 0x00000000 0x00000000
+(qemu) xp /1024x 0x80245000
+0000000080245000: 0x00000000 0x00000000 0x00000000 0x00000000
+0000000080245010: 0x00000000 0x00000000 0x00000000 0x00000000
+0000000080245020: 0x00000000 0x00000000 0x00000000 0x00000000
+0000000080245030: 0x00000000 0x00000000 0x00000000 0x00000000
 ...
-00000000802547f0: 0x00000000 0x00000000 0x00000000 0x00000000
-0000000080254800: 0x2008004f 0x2008040f 0x2008080f 0x20080c0f
-0000000080254810: 0x2008100f 0x2008140f 0x2008180f 0x20081c0f
-0000000080254820: 0x2008200f 0x2008240f 0x2008280f 0x20082c0f
-0000000080254830: 0x2008300f 0x2008340f 0x2008380f 0x20083c0f
-0000000080254840: 0x200840cf 0x2008440f 0x2008484f 0x20084c0f
-0000000080254850: 0x200850cf 0x2008540f 0x200858cf 0x20085c0f
-0000000080254860: 0x2008600f 0x2008640f 0x2008680f 0x20086c0f
-0000000080254870: 0x2008700f 0x2008740f 0x2008780f 0x20087c0f
-0000000080254880: 0x200880cf 0x2008840f 0x2008880f 0x20088c0f
+00000000802457f0: 0x00000000 0x00000000 0x00000000 0x00000000
+0000000080245800: 0x20091801 0x20091c01 0x20092001 0x20092401
+0000000080245810: 0x20092801 0x20092c01 0x20093001 0x20093401
+0000000080245820: 0x20093801 0x20093c01 0x20094001 0x20094401
+0000000080245830: 0x20094801 0x20094c01 0x20095001 0x20095401
+0000000080245840: 0x20095801 0x00000000 0x00000000 0x00000000
+0000000080245850: 0x00000000 0x00000000 0x00000000 0x00000000
 ...
 ```
 
@@ -386,20 +368,25 @@ We've manually read memory dumps, but QEMU actually provides a command that disp
 (qemu) info mem
 vaddr    paddr            size     attr
 -------- ---------------- -------- -------
-80200000 0000000080200000 00001000 rwx--a-
-80201000 0000000080201000 0000f000 rwx----
-80210000 0000000080210000 00001000 rwx--ad
+80200000 0000000080200000 00002000 rwx--a-
+80202000 0000000080202000 00001000 rwx--ad
+80203000 0000000080203000 00001000 rwx----
+80204000 0000000080204000 00001000 rwx--ad
+80205000 0000000080205000 00001000 rwx----
+80206000 0000000080206000 00001000 rwx--ad
+80207000 0000000080207000 00001000 rwx----
+80208000 0000000080208000 00001000 rwx--a-
+80209000 0000000080209000 00001000 rwx----
+8020a000 000000008020a000 00001000 rwx--a-
+8020b000 000000008020b000 00001000 rwx----
+8020c000 000000008020c000 00001000 rwx--a-
+8020d000 000000008020d000 00001000 rwx----
+8020e000 000000008020e000 00001000 rwx--a-
+8020f000 000000008020f000 00001000 rwx----
+80210000 0000000080210000 00001000 rwx--a-
 80211000 0000000080211000 00001000 rwx----
-80212000 0000000080212000 00001000 rwx--a-
-80213000 0000000080213000 00001000 rwx----
-80214000 0000000080214000 00001000 rwx--ad
-80215000 0000000080215000 00001000 rwx----
-80216000 0000000080216000 00001000 rwx--ad
-80217000 0000000080217000 00009000 rwx----
-80220000 0000000080220000 00001000 rwx--ad
-80221000 0000000080221000 0001f000 rwx----
-80240000 0000000080240000 00001000 rwx--ad
-80241000 0000000080241000 001bf000 rwx----
+80212000 0000000080212000 00001000 rwx--ad
+80213000 0000000080213000 001ed000 rwx----
 80400000 0000000080400000 00400000 rwx----
 80800000 0000000080800000 00400000 rwx----
 80c00000 0000000080c00000 00400000 rwx----
@@ -415,7 +402,7 @@ vaddr    paddr            size     attr
 83400000 0000000083400000 00400000 rwx----
 83800000 0000000083800000 00400000 rwx----
 83c00000 0000000083c00000 00400000 rwx----
-84000000 0000000084000000 00241000 rwx----
+84000000 0000000084000000 00233000 rwx----
 ```
 
 The columns represent, in order: virtual address, physical address, size (in hexadecimal bytes), and attributes.
