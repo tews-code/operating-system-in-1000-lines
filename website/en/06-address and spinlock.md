@@ -154,12 +154,12 @@ impl<T> Drop for Guard<'_, T> {
 }
 ```
 
-The spinlock allows us to avoid using `static mut` global variables. Instead, we wrap shared global variables in our `SpinLock`, which has an atomic boolean that indicates whether the it is locked, and an UnsafeCell for interior mutability. 
+The spinlock allows us to avoid using `static mut` global variables. Instead, we wrap shared global variables in our `SpinLock`, which has an atomic `AtomicBool` that indicates whether the it is locked, and an `UnsafeCell` for interior mutability. 
 
 To lock the spinlock, we set the boolean to `true` with _load_/_Acquire_ memory ordering, and unlock using _store_/_Release_ ordering. This creates a _happens_ _before_ relationship between taking a new lock and the previous lock. 
 
 To make sure we are exclusively changing the locked value, we use a "guard" which holds the spinlock, and which we can only get by successfully locking.
 
-Working with the guard directly is awkward, so we implement the `Deref` and `DerefMut` traits, which will perform an automatic deferencing, allowing us to treat the guard as if it were the lock. 
+Working with the guard directly means awkwardly dereferencing to get the lock, so we implement the `Deref` and `DerefMut` traits on it (which will perform an automatic deferencing), allowing us to treat the guard as if it were the lock. 
 
 We also implement `Drop` on the guard to unlock the lock. That avoids us having to explicitly drop the lock (although we can do so if we want to using `drop(lock_name)`.
