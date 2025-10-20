@@ -21,7 +21,11 @@ impl PAddr {
     }
 
     pub const fn as_ptr(&self) -> *const usize {
-        &raw const self.0
+        self.0 as *const usize
+    }
+
+    pub const fn as_ptr_mut(&mut self) -> *mut usize {
+         self.0 as *mut usize
     }
 }
 
@@ -40,7 +44,11 @@ impl VAddr {
     }
 
     pub const fn as_ptr_mut(&mut self) -> *mut usize {
-        &raw mut self.0
+        self.0 as *mut usize
+    }
+
+    pub const fn field_raw_ptr(&mut self) -> *mut usize {
+        &raw mut self.0 as *mut usize
     }
 }
 
@@ -48,4 +56,10 @@ pub const fn align_up(value: usize, align: usize) -> usize {
     debug_assert!(align.is_power_of_two());
 
     (value + (align - 1)) & !(align - 1)
+}
+
+pub const fn is_aligned(value: usize, align: usize) -> bool {
+    assert!(align.is_power_of_two(), "align must be a power of 2");
+    let align_mask = align - 1;
+    value & align_mask == 0
 }

@@ -15,6 +15,7 @@ mod address;
 mod allocator;
 #[macro_use]
 mod entry;
+mod page;
 mod panic;
 mod process;
 mod sbi;

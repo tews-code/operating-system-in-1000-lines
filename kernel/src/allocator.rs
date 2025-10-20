@@ -6,7 +6,7 @@ use core::ptr::write_bytes;
 use crate::address::{align_up, PAddr};
 use crate::spinlock::SpinLock;
 
-const PAGE_SIZE: usize = 4096;
+pub const PAGE_SIZE: usize = 4096;
 
 //Safety: Symbols created by linker script
 unsafe extern "C" {
@@ -30,22 +30,26 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let mut next_paddr = self.0.lock();
 
         // Initialise on first use
-        if next_paddr.is_none() {
-            *next_paddr = Some(PAddr::new(&raw const __free_ram as usize))
-        }
+        let mut paddr = *next_paddr.get_or_insert_with(|| {
+            PAddr::new(&raw const __free_ram as usize)
+        });
 
-        // Safe to unwrap as we know it is Some now
-        let paddr = next_paddr.unwrap();
-        let new_paddr = paddr.as_usize() + align_up(layout.size(), PAGE_SIZE);
+        let aligned_size = align_up(layout.size(), PAGE_SIZE);
+
+        let new_paddr = paddr.as_usize() + aligned_size;
         if new_paddr > &raw const __free_ram_end as usize {
             panic!("out of memory");
         }
+
         *next_paddr = Some(PAddr::new(new_paddr));
 
-        // Safety: paddr.as_ptr() is aligned and not null; entire PAGE_SIZE of bytes is available for write
-        unsafe{ write_bytes(paddr.as_ptr() as *mut usize, 0, PAGE_SIZE) };
+        // Safety: paddr.as_ptr_mut() is aligned and not null; entire aligned_size of bytes is available for write
+        unsafe{ write_bytes(paddr.as_ptr_mut() as *mut u8, 0x55, aligned_size) };
 
-        common::println!("alloc_pages test: {:x}", paddr.as_usize());
+        // crate::println!("alloc page: {:x}", paddr.as_usize());
+        // for _ in 0..5 {
+        //     crate::delay();
+        // }
 
         paddr.as_ptr() as *mut u8
     }

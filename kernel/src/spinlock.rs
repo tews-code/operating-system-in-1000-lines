@@ -21,18 +21,16 @@ impl<T> SpinLock<T> {
     }
 
     pub fn lock(&self) -> Guard<'_, T> {
-        // let mut i = 0;
         while self.locked.swap(true, Acquire) {
             core::hint::spin_loop();
-            // i += 1;
-            // if i % 300 == 0 {
-            //     crate::print!(".");
-            // }
+            // crate::print!(".");
+            panic!("locked");
         }
         Guard { lock: self }
     }
 }
 
+#[derive(Debug)]
 pub struct Guard<'a, T> {
     lock: &'a SpinLock<T>,
 }

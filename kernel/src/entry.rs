@@ -45,7 +45,7 @@ pub unsafe extern "C" fn kernel_entry() {
     naked_asm!(
         ".align 2",
         // Retrieve the kernel stack of the running process from sscratch.
-        "csrw sscratch, sp",
+        "csrrw sp, sscratch, sp",
         "addi sp, sp, -4 * 31",
         "sw ra,  4 * 0(sp)",
         "sw gp,  4 * 1(sp)",
@@ -78,8 +78,13 @@ pub unsafe extern "C" fn kernel_entry() {
         "sw s10, 4 * 28(sp)",
         "sw s11, 4 * 29(sp)",
 
+        // Retrieve and save the sp at the time of exeception
         "csrr a0, sscratch",
         "sw a0, 4 * 30(sp)",
+
+        // Reset the kernel stack.
+        "addi a0, sp, 4 * 31",
+        "csrw sscratch, a0",
 
         "mv a0, sp",
         "call handle_trap",

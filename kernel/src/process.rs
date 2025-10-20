@@ -1,10 +1,19 @@
 //! Process
 
-use core::arch::naked_asm;
-use core::fmt;
+use alloc::boxed::Box;
 
-use crate::address::VAddr;
+use core::arch::naked_asm;
+// use core::fmt;
+
+use crate::address::{PAddr, VAddr};
+use crate::allocator::PAGE_SIZE;
+use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X};
 use crate::spinlock::SpinLock;
+
+unsafe extern "C" {
+    static __kernel_base: u8;
+    static __free_ram_end: u8;
+}
 
 pub const PROCS_MAX: usize = 8;    // Maximum number of processes
 
@@ -14,12 +23,13 @@ pub enum State {
     Runnable,   // Runnable process
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug)]
 pub struct Process {
     pub pid: usize,            // Process ID
-    pub state: State,              // Process state: Unused or Runnable
+    pub state: State,          // Process state: Unused or Runnable
     pub sp: VAddr,             // Stack pointer
-    stack: [u8; 8192],         // Kernel stack
+    pub page_table: Option<Box<PageTable>>,
+    pub stack: [u8; 8192],     // Kernel stack
 }
 
 impl Process {
@@ -28,6 +38,7 @@ impl Process {
             pid: 0,
             state: State::Unused,
             sp: VAddr::new(0),
+            page_table: None,
             stack: [0; 8192],
         }
     }
@@ -38,46 +49,34 @@ pub struct Procs(pub SpinLock<[Process; PROCS_MAX]>);
 impl Procs {
     const fn new() -> Self {
         Self(
-            SpinLock::new([Process::empty(); PROCS_MAX])
+            SpinLock::new([const { Process::empty() }; PROCS_MAX])
         )
     }
 
-    pub fn index(&self, pid: usize) -> Option<usize> {
+    pub fn try_get_index(&self, pid: usize) -> Option<usize> {
         self.0.lock().iter().position(|p| p.pid == pid)
     }
-
-    pub fn get_disjoint_sp_ptrs(&self, pid_a: usize, pid_b: usize) -> Option<(*mut usize, *mut usize)> {
-        let mut procs = self.0.lock();
-
-        let index_a = procs.iter().position(|p| p.pid == pid_a)?;
-        let index_b = procs.iter().position(|p| p.pid == pid_b)?;
-
-        debug_assert_ne!(index_a, index_b, "processes must be different");
-        // Method allows us to get two &mut Process from the one Procs array at the same time
-        let [proc_a, proc_b] = procs.get_disjoint_mut([index_a, index_b]).ok()?;
-
-        Some((proc_a.sp.as_ptr_mut(), proc_b.sp.as_ptr_mut()))
-    }
 }
 
-impl fmt::Display for Procs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let procs = PROCS.0.lock();
-        for (i, process) in procs.iter().enumerate() {
-            writeln!(f, "PROC[{i}]")?;
-            write!(f, "PID: {} ", process.pid)?;
-            write!(f, "SP: {:x?} ", process.sp)?;
-            writeln!(f, "STATE: {:?} ", process.state)?;
-            writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
-        }
-        Ok(())
-    }
-}
+// Optional - but vital for debugging if you want to print the contents of PROCS.
+// impl fmt::Display for Procs {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let procs = PROCS.0.lock();
+//         for (i, process) in procs.iter().enumerate() {
+//             write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
+//             writeln!(f, "PROC[{i}]")?;
+//             write!(f, "PID: {} ", process.pid)?;
+//             write!(f, "SP: {:x?} ", process.sp)?;
+//             writeln!(f, "STATE: {:?} ", process.state)?;
+//             writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
+//         }
+//         Ok(())
+//     }
+// }
 
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
 pub fn create_process(pc: usize) -> usize {
-
     let mut procs = PROCS.0.lock();
 
     // Find an unused process control structure.
@@ -113,10 +112,20 @@ pub fn create_process(pc: usize) -> usize {
         offset += size_of::<usize>();
     }
 
+    // Map kernel pages.
+    let mut page_table = Box::new(PageTable::new());
+    let kernel_base = &raw const __kernel_base as usize;
+    let free_ram_end = &raw const __free_ram_end as usize;
+
+    for paddr in (kernel_base..free_ram_end).step_by(PAGE_SIZE) {
+        map_page(page_table.as_mut(), VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
+    }
+
     // Initialise fields.
     process.pid = i + 1;
     process.state = State::Runnable;
     process.sp = VAddr::new(&raw const process.stack[callee_saved_regs_start] as usize);
+    process.page_table = Some(page_table);
 
     process.pid
 }
