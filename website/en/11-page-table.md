@@ -224,7 +224,7 @@ pub fn create_process(pc: usize) -> usize {
 
 ## Switching page tables
 
-Let's switch the process's page table when context switching:
+Let's switch the process's page table when context switching in `scheduler.rs`:
 
 ```rust [kernel/src/scheduler.rs]
 ...
