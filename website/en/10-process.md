@@ -126,40 +126,30 @@ pub struct Procs(pub SpinLock<[Process; PROCS_MAX]>);
 impl Procs {
     const fn new() -> Self {
         Self(
-            SpinLock::new([Process::empty(); PROCS_MAX])
+            SpinLock::new([const { Process::empty() }; PROCS_MAX])
         )
     }
 
-    pub fn get_disjoint_sp_ptrs(&self, pid_a: usize, pid_b: usize) -> Option<(*mut usize, *mut usize)> {
-        let mut procs = self.0.lock();
-
-        let index_a = procs.iter().position(|p| p.pid == pid_a)?;
-        let index_b = procs.iter().position(|p| p.pid == pid_b)?;
-
-        debug_assert_ne!(index_a, index_b, "processes must be different");
-
-        // Method allows us to get two &mut Process from the one Procs array at the same time
-        let [proc_a, proc_b] = procs.get_disjoint_mut([index_a, index_b]).ok()?;
-
-        Some((proc_a.sp.as_ptr_mut(), proc_b.sp.as_ptr_mut()))
+    pub fn try_get_index(&self, pid: usize) -> Option<usize> {
+        self.0.lock().iter().position(|p| p.pid == pid)
     }
 }
 
 // Optional - but vital for debugging if you want to print the contents of PROCS.
-impl fmt::Display for Procs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let procs = PROCS.0.lock();
-        for (i, process) in procs.iter().enumerate() {
-            write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
-            writeln!(f, "PROC[{i}]")?;
-            write!(f, "PID: {} ", process.pid)?;
-            write!(f, "SP: {:x?} ", process.sp)?;
-            writeln!(f, "STATE: {:?} ", process.state)?;
-            writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
-        }
-        Ok(())
-    }
-}
+// impl fmt::Display for Procs {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let procs = PROCS.0.lock();
+//         for (i, process) in procs.iter().enumerate() {
+//             write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
+//             writeln!(f, "PROC[{i}]")?;
+//             write!(f, "PID: {} ", process.pid)?;
+//             write!(f, "SP: {:x?} ", process.sp)?;
+//             writeln!(f, "STATE: {:?} ", process.state)?;
+//             writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
+//         }
+//         Ok(())
+//     }
+// }
 
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
@@ -324,15 +314,14 @@ The following `yield_now` function is the implementation of the scheduler:
 
 use crate::process::{create_process, PROCS, PROCS_MAX, State, switch_context};
 use crate::spinlock::SpinLock;
-
-
+    
 static IDLE_PROC: SpinLock<Option<usize>> = SpinLock::new(None);    // Idle process
 static CURRENT_PROC: SpinLock<Option<usize>> = SpinLock::new(None); // Currently running process
 const IDLE_PID: usize = 0; // idle
 
 pub fn yield_now() {
     // Initialse IDLE_PROC if not yet initialised
-    IDLE_PROC.lock().get_or_insert_with(|| {
+    let idle_pid = { *IDLE_PROC.lock().get_or_insert_with(|| {
             let idle_pid = create_process(0);
             if let Some(p) = PROCS.0.lock().iter_mut()
                 .find(|p| p.pid == idle_pid) {
@@ -340,17 +329,15 @@ pub fn yield_now() {
                 }
             *CURRENT_PROC.lock() = Some(IDLE_PID);
             IDLE_PID
-        }
-    );
+        })
+    };
 
-    let idle_pid = IDLE_PROC.lock()
-        .expect("IDLE_PROC initialised before use");
     let current_pid = CURRENT_PROC.lock()
         .expect("CURRENT_PROC initialised before use");
 
     // Search for a runnable process
     let next_pid = {
-        let current_index = PROCS.index(current_pid)
+        let current_index = PROCS.try_get_index(current_pid)
             .expect("current process PID should have an index");
         PROCS.0.lock().iter()
             .cycle()
@@ -358,7 +345,7 @@ pub fn yield_now() {
             .take(PROCS_MAX)
             .find(|p| p.state == State::Runnable && p.pid != idle_pid)
             .map(|p| p.pid)
-            .unwrap_or_else(|| idle_pid)
+            .unwrap_or(idle_pid)
     };
 
     // If there's no runnable process other than the current one, return and continue processing
@@ -366,11 +353,24 @@ pub fn yield_now() {
         return;
     }
 
+    // Get current and next SP pointers from the PROCS array at the same time
+    let (next_sp_ptr, current_sp_ptr) = {
+        let next_index = PROCS.try_get_index(next_pid)
+            .expect("should find next by pid");
+        let current_index = PROCS.try_get_index(current_pid)
+            .expect("should find current by pid");
+        let mut procs = PROCS.0.lock();
+        let [next, current] = procs.get_disjoint_mut([next_index, current_index])
+            .expect("indices should be valid and distinct");
+
+        let next_sp_ptr = next.sp.field_raw_ptr();
+        let current_sp_ptr = current.sp.field_raw_ptr();
+
+        (next_sp_ptr, current_sp_ptr)
+    };
+
     // Context switch
     *CURRENT_PROC.lock() = Some(next_pid);
-    let (current_sp_ptr, next_sp_ptr) = PROCS
-        .get_disjoint_sp_ptrs(current_pid, next_pid)
-        .expect("failed to get stack pointers for context switch");
     unsafe {
         switch_context(current_sp_ptr, next_sp_ptr);
     }
@@ -437,24 +437,6 @@ fn kernel_main() -> ! {
 ...
 ```
 
-```c [kernel.c] {5,13}
-void proc_a_entry(void) {
-    printf("starting process A\n");
-    while (1) {
-        putchar('A');
-        yield();
-    }
-}
-
-void proc_b_entry(void) {
-    printf("starting process B\n");
-    while (1) {
-        putchar('B');
-        yield();
-    }
-}
-```
-
 If "🐈" and "🐕" are printed as before, it works perfectly!
 
 ## Changes in the exception handler
@@ -464,32 +446,34 @@ In the exception handler, it saves the execution state onto the stack. However, 
 First, store a pointer to the bottom of the kernel stack for the currently executing process in the `sscratch` register during process switching.
 We will read this during the exception handler (see [Appendix: Why do we reset the stack pointer?](#appendix-why-do-we-reset-the-stack-pointer) for more explanation).
 
-Let's start by creating a helper function to give us a pointer to the stack top of any process:
+(We do this using the `asm!` macro, instead of our own `write_csr!` macro as we will be expanding this assembly in the next chapter.)
 
-```rust [kernel/src/process.rs]
+```rust [kernel/src/scheduler.rs] {2, 7, 18, 19, 22-25}
 ...
-impl Procs {
-    ...
-    pub fn stack_top_ptr(&self, pid: usize) -> *const u8 {
-        let procs = self.0.lock();
-        let p = procs.iter()
-            .find(|p| p.pid == pid)
-            .expect("should find process");
-        // Safety: The process stack pointer is guaranteed to be:
-        // - Properly aligned for the target architecture
-        // - Lifetime of process is static
-        // - stack.len() won't overflow when added to the base pointer
-        unsafe { p.stack.as_ptr().add(p.stack.len()) }
-    }
-}
-```
-Then use this helper function to write the stack top to the scratch register:
-
-```rust [kernel/src/scheduler.rs]
+use core::arch::asm;
+...
 /* Omitted */
 pub fn yield_now() {
     ...
-    write_csr!("sscratch", PROCS.stack_top_ptr(next_pid));
+    let (next_sp_ptr, current_sp_ptr, sscratch) = {
+        let next_index = PROCS.try_get_index(next_pid)
+            .expect("should find next by pid");
+        let current_index = PROCS.try_get_index(current_pid)
+            .expect("should find current by pid");
+        let mut procs = PROCS.0.lock();
+        let [next, current] = procs.get_disjoint_mut([next_index, current_index])
+            .expect("indices should be valid and distinct");
+
+        let next_sp_ptr = next.sp.field_raw_ptr();
+        let current_sp_ptr = current.sp.field_raw_ptr();
+        let sscratch = unsafe { next.stack.as_ptr().add(next.stack.len()) };
+        (next_sp_ptr, current_sp_ptr, sscratch)
+    };
+
+    unsafe{asm!(
+        "csrw sscratch, {sscratch}",
+        sscratch = in(reg) sscratch
+    )};
 
     // Context switch
     *CURRENT_PROC.lock() = Some(next_pid);
