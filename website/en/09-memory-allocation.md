@@ -45,7 +45,7 @@ use core::ptr::write_bytes;
 use crate::address::{align_up, PAddr};
 use crate::spinlock::SpinLock;
 
-const PAGE_SIZE: usize = 4096;
+pub const PAGE_SIZE: usize = 4096;
 
 //Safety: Symbols created by linker script
 unsafe extern "C" {
@@ -69,23 +69,24 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let mut next_paddr = self.0.lock();
 
         // Initialise on first use
-        if next_paddr.is_none() {
-            *next_paddr = Some(PAddr::new(&raw const __free_ram as usize))
-        }
+        let mut paddr = *next_paddr.get_or_insert_with(|| {
+            PAddr::new(&raw const __free_ram as usize)
+        });
 
-        // Safe to unwrap as we know it is Some now
-        let paddr = next_paddr.unwrap();
-        let new_paddr = paddr.as_usize() + align_up(layout.size(), PAGE_SIZE);
+        let aligned_size = align_up(layout.size(), PAGE_SIZE);
+
+        let new_paddr = paddr.as_usize() + aligned_size;
         if new_paddr > &raw const __free_ram_end as usize {
             panic!("out of memory");
         }
+
         *next_paddr = Some(PAddr::new(new_paddr));
 
-        // Safety: paddr.as_ptr() is aligned and not null; entire PAGE_SIZE of bytes is available for write
-        unsafe{ write_bytes(paddr.as_ptr() as *mut usize, 0, PAGE_SIZE) };
+        // Safety: paddr.as_ptr_mut() is aligned and not null; entire aligned_size of bytes is available for write
+        unsafe{ write_bytes(paddr.as_ptr_mut() as *mut u8, 0, aligned_size) };
 
-        // Testing only - comment out
-        common::println!("alloc_pages test: {:x}", paddr.as_usize());
+        // Uncomment for testing
+        // crate::println!("alloc page: {:x}", paddr.as_usize());
 
         paddr.as_ptr() as *mut u8
     }
@@ -94,7 +95,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
 }
 ```
 
-We are going to use the Rust `GlobalAllocator` trait used for building allocators. We create a struct `BumpAllocator` to associate with the trait, and in our simple allocator all we need is the next physical address to allocate. We then need to provide two functions for the trait: `alloc` and `dealloc` - and in return we can use the `alloc` crate.
+We are going to use the Rust `GlobalAllocator` trait used for building allocators. We create a struct `BumpAllocator` to associate with the trait, and in our simple allocator all we need is the next physical address to allocate. We then need to provide two functions for the trait: `alloc` and `dealloc` - and in return we can use the `alloc` crate!
 
 The `alloc` function signature is ` unsafe fn alloc(&self, layout: Layout) -> *mut u8`, where the allocation request is provided as a `Layout` type: 
 
@@ -104,7 +105,7 @@ pub struct Layout {
     align: Alignment,
 }
 ```
-To simplify things, we will ignore the requested alignment, and always align to a full page.
+To simplify things, we will ignore the requested alignment and always align to a multiple of a full page.
 
 You will find the following key points:
 
@@ -149,9 +150,9 @@ Verify that the first address matches the address of `__free_ram`, and that the 
 
 ```
 $ ./run.sh
-alloc_pages test: 80222000
-alloc_pages test: 80223000
-alloc_pages test: 80224000
+alloc page: 80222000
+alloc page: 80223000
+alloc pages: 80224000
 We can now allocate! Let's try strings: Hello World! 🦀, vectors: [1, 2, 3] and boxes: 42
 ```
 
