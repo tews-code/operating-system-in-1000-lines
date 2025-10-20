@@ -472,7 +472,7 @@ pub fn yield_now() {
 
     unsafe{asm!(
         "csrw sscratch, {sscratch}",
-        sscratch = in(reg) sscratch
+        sscratch = in(reg) sscratch,
     )};
 
     // Context switch
