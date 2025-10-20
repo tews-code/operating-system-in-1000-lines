@@ -37,40 +37,101 @@ When accessing memory, CPU calculates `VPN[1]` and `VPN[0]` to identify the corr
 
 ## Constructing the page table
 
-Let's construct a page table in Sv32. First, we'll define some macros. `SATP_SV32` is a single bit in the `satp` register which indicates "enable paging in Sv32 mode", and `PAGE_*` are flags to be set in page table entries.
+Let's construct a page table in Sv32. First, we'll create a new file `page.rs` and define some constants. `SATP_SV32` is a single bit in the `satp` register which indicates "enable paging in Sv32 mode", and `PAGE_*` are flags to be set in page table entries.
 
-```c [kernel.h]
-#define SATP_SV32 (1u << 31)
-#define PAGE_V    (1 << 0)   // "Valid" bit (entry is enabled)
-#define PAGE_R    (1 << 1)   // Readable
-#define PAGE_W    (1 << 2)   // Writable
-#define PAGE_X    (1 << 3)   // Executable
-#define PAGE_U    (1 << 4)   // User (accessible in user mode)
+```rust [kernel/src/page.rs]
+pub const SATP_SV32: usize = 1 << 31;
+pub const PAGE_V: usize = 1 << 0;   // "Valid" bit (entry is enabled)
+pub const PAGE_R: usize = 1 << 1;   // Readable
+pub const PAGE_W: usize = 1 << 2;   // Writable
+pub const PAGE_X: usize = 1 << 3;   // Executable
+pub const PAGE_U: usize = 1 << 4;   // User (accessible in user mode)
 ```
+
+Let's also extend our definitions of `VAddr` and `PAddr` to with helper methods to convert to and from `vpn` and `ppn` values:
+
+```rust [kernel/src/page.rs]
+...
+use crate::allocator::PAGE_SIZE;
+
+impl VAddr {
+    fn vpn0(&self) -> usize {
+        self.as_usize() >> 12 & 0x3FF
+    }
+
+    fn vpn1(&self) -> usize {
+        self.as_usize() >> 22 & 0x3FF
+    }
+}
+
+impl PAddr {
+    fn ppn(&self) -> usize {
+        (self.as_usize() / PAGE_SIZE) << 10
+    }
+
+    fn from_ppn(pte: usize) -> Self {
+        PAddr::new((pte >> 10) * PAGE_SIZE)
+    }
+}
+```
+
+Now define a structure representing a page table: 
+
+```rust [kernel/src/page.rs]
+...
+const ENTRIES_PER_TABLE: usize = 1024; // Each Page Table Entry is 4 bytes in Sv32
+
+#[derive(Copy, Clone, Debug)]
+pub struct PageTable([usize; ENTRIES_PER_TABLE]);
+
+impl PageTable {
+    pub const fn new() -> Self {
+        Self([0; ENTRIES_PER_TABLE])
+    }
+}
+
+impl Index<usize> for PageTable {
+    type Output = usize;
+
+    fn index(&self, vpn: usize) -> &Self::Output {
+        &self.0[vpn]
+    }
+}
+
+impl IndexMut<usize> for PageTable {
+    fn index_mut(&mut self, vpn: usize) -> &mut Self::Output {
+        &mut self.0[vpn]
+    }
+}
+```
+
+Here we define the page table as an array of 1024 page table entries. As we want to index into this table using page numbers, we add the traits `Index` and `IndexMut`. 
 
 ## Mapping pages
 
 The following `map_page` function takes the first-level page table (`table1`), the virtual address (`vaddr`), the physical address (`paddr`), and page table entry flags (`flags`):
 
-```c [kernel.c]
-void map_page(uint32_t *table1, uint32_t vaddr, paddr_t paddr, uint32_t flags) {
-    if (!is_aligned(vaddr, PAGE_SIZE))
-        PANIC("unaligned vaddr %x", vaddr);
+```rust [kernel/src/page.rs]
+pub fn map_page(table1: &mut PageTable, vaddr: VAddr, paddr: PAddr, flags: usize) {
+    assert!(is_aligned(vaddr.as_usize(), PAGE_SIZE), "unaligned vaddr {}", vaddr.as_usize());
 
-    if (!is_aligned(paddr, PAGE_SIZE))
-        PANIC("unaligned paddr %x", paddr);
+    assert!(is_aligned(paddr.as_usize(), PAGE_SIZE), "unaligned paddr {}", paddr.as_usize());
 
-    uint32_t vpn1 = (vaddr >> 22) & 0x3ff;
-    if ((table1[vpn1] & PAGE_V) == 0) {
-        // Create the 1st level page table if it doesn't exist.
-        uint32_t pt_paddr = alloc_pages(1);
-        table1[vpn1] = ((pt_paddr / PAGE_SIZE) << 10) | PAGE_V;
+    let vpn1 = vaddr.vpn1();
+
+    // Create the 1st level page table if it doesn't exist.
+    if table1[vpn1] & PAGE_V == 0 {
+        let table0 = Box::new(PageTable::new());
+        let table0_paddr = PAddr::new(Box::into_raw(table0) as *mut _ as usize);
+        table1[vpn1] = table0_paddr.ppn() | PAGE_V;
     }
 
-    // Set the 2nd level page table entry to map the physical page.
-    uint32_t vpn0 = (vaddr >> 12) & 0x3ff;
-    uint32_t *table0 = (uint32_t *) ((table1[vpn1] >> 10) * PAGE_SIZE);
-    table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
+    let table0 = unsafe {
+        let mut table0_paddr = PAddr::from_ppn(table1[vpn1]);
+        &mut *(table0_paddr.as_ptr_mut() as *mut PageTable)
+    };
+
+    table0[vaddr.vpn0()] = paddr.ppn() | flags | PAGE_V;
 }
 ```
 
@@ -104,41 +165,114 @@ SECTIONS {
 
 Next, add the page table to the process struct. This will be a pointer to the first-level page table.
 
-```c [kernel.h] {5}
-struct process {
-    int pid;
-    int state;
-    vaddr_t sp;
-    uint32_t *page_table;
-    uint8_t stack[8192];
-};
+```rust [kernel/src/process.rs] {2-4, 10, 20}
+...
+use crate::address::{PAddr, VAddr};
+use crate::allocator::PAGE_SIZE;
+use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X};
+...
+pub struct Process {
+    pub pid: usize,            // Process ID
+    pub state: State,          // Process state: Unused or Runnable
+    pub sp: VAddr,             // Stack pointer
+    pub page_table: Option<Box<PageTable>>,
+    pub stack: [u8; 8192],     // Kernel stack
+}
+
+impl Process {
+    const fn empty() -> Self {
+        Self {
+            pid: 0,
+            state: State::Unused,
+            sp: VAddr::new(0),
+            page_table: None,
+            stack: [0; 8192],
+        }
+    }
+}
 ```
 
-Lastly, map the kernel pages in the `create_process` function. The kernel pages span from `__kernel_base` to `__free_ram_end`. This approach ensures that the kernel can always access both statically allocated areas (like `.text`), and dynamically allocated areas managed by `alloc_pages`:
+Lastly, map the kernel pages in the `create_process` function. The kernel pages span from `__kernel_base` to `__free_ram_end`. This approach ensures that the kernel can always access both statically allocated areas (like `.text`), and dynamically allocated areas managed by `alloc`:
 
-```c [kernel.c] {1,6-11,15}
-extern char __kernel_base[];
-
-struct process *create_process(uint32_t pc) {
-    /* omitted */
-
+```rust [kernel/src/process.rs]
+...
+unsafe extern "C" {
+    static __kernel_base: u8;
+    static __free_ram_end: u8;
+}
+...
+pub fn create_process(pc: usize) -> usize {
+    ...
     // Map kernel pages.
-    uint32_t *page_table = (uint32_t *) alloc_pages(1);
-    for (paddr_t paddr = (paddr_t) __kernel_base;
-         paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE)
-        map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+    let mut page_table = Box::new(PageTable::new());
+    let kernel_base = &raw const __kernel_base as usize;
+    let free_ram_end = &raw const __free_ram_end as usize;
 
-    proc->pid = i + 1;
-    proc->state = PROC_RUNNABLE;
-    proc->sp = (uint32_t) sp;
-    proc->page_table = page_table;
-    return proc;
+    for paddr in (kernel_base..free_ram_end).step_by(PAGE_SIZE) {
+        map_page(page_table.as_mut(), VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
+    }
+
+    // Initialise fields.
+    process.pid = i + 1;
+    process.state = State::Runnable;
+    process.sp = VAddr::new(&raw const process.stack[callee_saved_regs_start] as usize);
+    process.page_table = Some(page_table);
+
+    process.pid
 }
 ```
 
 ## Switching page tables
 
 Let's switch the process's page table when context switching:
+
+```rust [kernel/src/scheduler.rs]
+...
+use crate::allocator::PAGE_SIZE;
+use crate::page::{SATP_SV32, PageTable};
+...
+pub fn yield_now() {
+    ...
+    let (next_sp_ptr, current_sp_ptr, satp, sscratch) = {
+        let next_index = PROCS.try_get_index(next_pid)
+            .expect("should find next by pid");
+        let current_index = PROCS.try_get_index(current_pid)
+            .expect("should find current by pid");
+        let mut procs = PROCS.0.lock();
+        let [next, current] = procs.get_disjoint_mut([next_index, current_index])
+            .expect("indices should be valid and distinct");
+
+        let next_sp_ptr = next.sp.field_raw_ptr();
+        let current_sp_ptr = current.sp.field_raw_ptr();
+
+        let page_table = next.page_table.as_ref().expect("page_table should exist");
+        // Double deref on page_table for both ref and Box.
+        let page_table_addr = &**page_table as *const PageTable as usize;
+        let satp = SATP_SV32 | (page_table_addr / PAGE_SIZE);
+        //Safety: sscratch points to the end of next.stack, which is a valid stack allocation.
+        let sscratch = unsafe { next.stack.as_ptr().add(next.stack.len()) };
+        (next_sp_ptr, current_sp_ptr, satp, sscratch)
+    };
+
+    unsafe{asm!(
+        "sfence.vma",
+        "csrw satp, {satp}",
+        "sfence.vma",
+        "csrw sscratch, {sscratch}",
+        satp = in(reg) satp,
+        sscratch = in(reg) sscratch,
+    )};
+
+    // Context switch
+    *CURRENT_PROC.lock() = Some(next_pid);
+    unsafe {
+        switch_context(current_sp_ptr, next_sp_ptr);
+    }
+}
+
+
+
+```
 
 ```c [kernel.c] {5-7,10-11}
 void yield(void) {
