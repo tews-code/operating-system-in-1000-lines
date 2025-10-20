@@ -421,18 +421,13 @@ Setting up page tables can be tricky, and mistakes can be hard to notice. In thi
 
 Let's say we forget to set the mode in the `satp` register:
 
-```c [kernel.c] {6}
-    __asm__ __volatile__(
-        "sfence.vma\n"
-        "csrw satp, %[satp]\n"
-        "sfence.vma\n"
-        :
-        : [satp] "r" (((uint32_t) next->page_table / PAGE_SIZE)) // Missing SATP_SV32!
-    );
+```rust [kernel/src/process.rs]
+        ...
+        let satp =  (page_table_addr / PAGE_SIZE); // Missing SATP_SV32!
+        ...
 ```
 
-However, when you run the OS, you'll see that it works as usual. This is because paging remains disabled and 
-memory addresses are treated as physical addresses as before.
+However, when you run the OS, you'll see that it works as usual. This is because paging remains disabled and memory addresses are treated as physical addresses as before.
 
 To debug this case, try `info mem` command in the QEMU monitor. You'll see something like this:
 
@@ -445,16 +440,11 @@ No translation or protection
 
 Let's say we mistakenly specify the page table using a physical *address* instead of a physical *page number*:
 
-```c [kernel.c] {6}
-    __asm__ __volatile__(
-        "sfence.vma\n"
-        "csrw satp, %[satp]\n"
-        "sfence.vma\n"
-        :
-        : [satp] "r" (SATP_SV32 | ((uint32_t) next->page_table)) // Forgot to shift!
-    );
+```rust [kernel/src/process.rs]
+        ...
+        let satp = SATP_SV32 | (page_table_addr); // Forgot to shift!
+        ...
 ```
-
 In this case, `info mem` will print no mappings:
 
 ```
@@ -474,13 +464,13 @@ To debug this, dump registers to see what the CPU is doing:
 
 CPU#0
  V      =   0
- pc       80200188
+ pc       80200e60
  ...
  scause   0000000c
  ...
 ```
 
-According to `llvm-addr2line`, `80200188` is the starting address of the exception handler. The exception reason in `scause` corresponds to "Instruction page fault". 
+According to `llvm-objdump`, `80200e60` is the starting address of the exception handler. The exception reason in `scause` corresponds to "Instruction page fault". 
 
 Let's take a closer look at what's specifically happening by examining the QEMU logs:
 
@@ -491,20 +481,75 @@ $QEMU -machine virt -bios default -nographic -serial mon:stdio --no-reboot \
 ```
 
 ```
-Invalid read at addr 0x253000800, size 4, region '(null)', reason: rejected
-riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200580, tval:0x80200580, desc=exec_page_fault
-Invalid read at addr 0x253000800, size 4, region '(null)', reason: rejected
-riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200188, tval:0x80200188, desc=exec_page_fault
-Invalid read at addr 0x253000800, size 4, region '(null)', reason: rejected
-riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200188, tval:0x80200188, desc=exec_page_fault
+...
+Invalid read at addr 0x233000800, size 4, region '(null)', reason: rejected
+riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200a98, tval:0x80200a98, desc=exec_page_fault
+Invalid read at addr 0x233000800, size 4, region '(null)', reason: rejected
+riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200e60, tval:0x80200e60, desc=exec_page_fault
+Invalid read at addr 0x233000800, size 4, region '(null)', reason: rejected
+riscv_cpu_do_interrupt: hart:0, async:0, cause:0000000c, epc:0x80200e60, tval:0x80200e60, desc=exec_page_fault
+Invalid read at addr 0x233000800, size 4, region '(null)', reason: rejected
+...
 ```
 
 Here are what you can infer from the logs:
 
-- `epc`, which indicates the location of the page fault exception, is `0x80200580`. `llvm-objdump` shows that it points to the instruction immediately after setting the `satp` register. This means that a page fault occurs right after enabling paging.
+- `epc`, which indicates the location of the page fault exception, is `0x80200a98`. `llvm-objdump` shows that it points to the instruction immediately after setting the `satp` register. This means that a page fault occurs right after enabling paging.
 
-- All subsequent page faults show the same value. The exceptions occurred at `0x80200188`, points to the starting address of the exception handler. Because this log continues indefinitely, the exceptions (page fault) occurs when trying to execute the exception handler.
+- All subsequent page faults show the same value. The exceptions occurred at `0x80200e60`, points to the starting address of the exception handler. Because this log continues indefinitely, the exceptions (page fault) occurs when trying to execute the exception handler.
 
-- Looking at the `info registers` in QEMU monitor, `satp` is `0x80253000`. Calculating the physical address according to the specification: `(0x80253000 & 0x3fffff) * 4096 = 0x253000000`, which does not fit within a 32-bit address space. This indicates that an abnormal value has been set.
+- Looking at the `info registers` in QEMU monitor, `satp` is `0x80233000`. Calculating the physical address according to the specification: `(0x80233000 & 0x3fffff) * 4096 = 0x233000000`, which does not fit within a 32-bit address space. This indicates that an abnormal value has been set.
 
 To summarize, you can investigate what's wrong by checking QEMU logs, register dumps, and memory dumps. However, the most important thing is to _"read the specification carefully."_ It's very common to overlook or misinterpret it.
+
+Here is an example with debug printing. Each process has two pages assigned for table1 and table0 respectively, and then the vpn0 offset in table0 are used to populate the page table entries:
+
+```
+create_process: calling map_page ...
+
+map_page: starting mapping ...
+map_page: table1 is at address 80234000
+map_page: vpn1 is 200
+map_page: table0 created at address 0x80235000
+map_page: table1[vpn1] is Pte(2008d401)
+map_page: table0 recovered from table1[vpn1] PTE starts at address 80235000
+map_page: vpn0 is 200
+map_page: table0[vpn0] set to Pte(2008000f)
+
+map_page: starting mapping ...
+map_page: table1 is at address 80234000
+map_page: vpn1 is 200
+map_page: table1[vpn1] is Pte(2008d401)
+map_page: table0 recovered from table1[vpn1] PTE starts at address 80235000
+map_page: vpn0 is 201
+map_page: table0[vpn0] set to Pte(2008040f)
+
+map_page: starting mapping ...
+map_page: table1 is at address 80234000
+map_page: vpn1 is 200
+map_page: table1[vpn1] is Pte(2008d401)
+map_page: table0 recovered from table1[vpn1] PTE starts at address 80235000
+map_page: vpn0 is 202
+map_page: table0[vpn0] set to Pte(2008080f)
+
+...
+
+map_page: starting mapping ...
+map_page: table1 is at address 80258000
+map_page: vpn1 is 210
+map_page: table1[vpn1] is Pte(2009a401)
+map_page: table0 recovered from table1[vpn1] PTE starts at address 80269000
+map_page: vpn0 is 232
+map_page: table0[vpn0] set to Pte(2108c80f)
+
+map_page: starting mapping ...
+map_page: table1 is at address 80258000
+map_page: vpn1 is 210
+map_page: table1[vpn1] is Pte(2009a401)
+map_page: table0 recovered from table1[vpn1] PTE starts at address 80269000
+map_page: vpn0 is 233
+map_page: table0[vpn0] set to Pte(2108cc0f)
+
+yield_now: satp is being set to 80080234
+yield_now: sscratch is being set to 0x8020517c
+```
