@@ -46,7 +46,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
         // Safety: paddr.as_ptr_mut() is aligned and not null; entire aligned_size of bytes is available for write
         unsafe{ write_bytes(paddr.as_ptr_mut() as *mut u8, 0x55, aligned_size) };
 
-        // crate::println!("alloc page: {:x}", paddr.as_usize());
+        // crate::println!("alloc page: {:x} with {} pages allocated", paddr.as_usize(), aligned_size / PAGE_SIZE);
         // for _ in 0..5 {
         //     crate::delay();
         // }

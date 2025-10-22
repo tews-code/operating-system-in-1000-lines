@@ -8,6 +8,8 @@ pub extern crate alloc;
 use core::arch::{asm, naked_asm};
 use core::ptr::write_bytes;
 
+use crate::process::PROCS;
+
 #[allow(unused_imports)]
 use common::{print, println};
 
@@ -27,12 +29,16 @@ use crate::process::create_process;
 use crate::scheduler::yield_now;
 use crate::spinlock::SpinLock;
 
-
 // Safety: Symbols created by linker script
 unsafe extern "C" {
     static __bss: u8;
     static __bss_end: u8;
     static __stack_top: u8;
+}
+
+unsafe extern "C" {
+    static _binary_shell_bin_start: u8;
+    static _binary_shell_bin_size: u8;
 }
 
 fn delay() {
@@ -76,12 +82,17 @@ fn kernel_main() -> ! {
 
     common::println!("Hello World! 🦀");
 
-    PROC_A.lock().get_or_insert_with(|| {
-        create_process(proc_a_entry as usize)
-    });
-    PROC_B.lock().get_or_insert_with(|| {
-        create_process(proc_b_entry as usize)
-    });
+    // PROC_A.lock().get_or_insert_with(|| {
+    //     create_process(proc_a_entry as usize)
+    // });
+    // PROC_B.lock().get_or_insert_with(|| {
+    //     create_process(proc_b_entry as usize)
+    // });
+
+    // new!
+    let shell_start = &raw const _binary_shell_bin_start as *const u8 as *mut u8;
+    let shell_size = &raw const _binary_shell_bin_size as usize;  // The symbol _address_ is the size of the binary
+    let _ = create_process(shell_start, shell_size);
 
     yield_now();
 

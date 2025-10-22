@@ -14,7 +14,7 @@ const IDLE_PID: usize = 0; // idle
 pub fn yield_now() {
     // Initialse IDLE_PROC if not yet initialised
     let idle_pid = { *IDLE_PROC.lock().get_or_insert_with(|| {
-            let idle_pid = create_process(0);
+            let idle_pid = create_process(core::ptr::null(), 0);
             if let Some(p) = PROCS.0.lock().iter_mut()
                 .find(|p| p.pid == idle_pid) {
                     p.pid = IDLE_PID;
@@ -62,6 +62,7 @@ pub fn yield_now() {
         let page_table_addr = &**page_table as *const PageTable as usize;
         let satp = SATP_SV32 | (page_table_addr / PAGE_SIZE);
         //Safety: sscratch points to the end of next.stack, which is a valid stack allocation.
+
         let sscratch = unsafe { next.stack.as_ptr().add(next.stack.len()) };
         (next_sp_ptr, current_sp_ptr, satp, sscratch)
     };

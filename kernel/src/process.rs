@@ -1,13 +1,15 @@
 //! Process
 
+use alloc::slice;
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 
-use core::arch::naked_asm;
-// use core::fmt;
+use core::arch::{asm, naked_asm};
+use core::fmt;
 
-use crate::address::{PAddr, VAddr};
+use crate::address::{align_up, PAddr, VAddr};
 use crate::allocator::PAGE_SIZE;
-use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X};
+use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X, PAGE_U};
 use crate::spinlock::SpinLock;
 
 unsafe extern "C" {
@@ -15,7 +17,7 @@ unsafe extern "C" {
     static __free_ram_end: u8;
 }
 
-pub const PROCS_MAX: usize = 8;    // Maximum number of processes
+pub const PROCS_MAX: usize = 8;         // Maximum number of processes
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum State {
@@ -59,24 +61,40 @@ impl Procs {
 }
 
 // Optional - but vital for debugging if you want to print the contents of PROCS.
-// impl fmt::Display for Procs {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         let procs = PROCS.0.lock();
-//         for (i, process) in procs.iter().enumerate() {
-//             write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
-//             writeln!(f, "PROC[{i}]")?;
-//             write!(f, "PID: {} ", process.pid)?;
-//             write!(f, "SP: {:x?} ", process.sp)?;
-//             writeln!(f, "STATE: {:?} ", process.state)?;
-//             writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
-//         }
-//         Ok(())
-//     }
-// }
+impl fmt::Display for Procs {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let procs = PROCS.0.lock();
+        for (i, process) in procs.iter().enumerate() {
+            write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
+            writeln!(f, "PROC[{i}]")?;
+            write!(f, "PID: {} ", process.pid)?;
+            write!(f, "SP: {:x?} ", process.sp)?;
+            writeln!(f, "STATE: {:?} ", process.state)?;
+            writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
+        }
+        Ok(())
+    }
+}
 
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
-pub fn create_process(pc: usize) -> usize {
+// The base virtual address of an application image. This needs to match the
+// starting address defined in `user.ld`.
+const USER_BASE: usize = 0x1000000;
+const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
+
+fn user_entry() {
+    unsafe{asm!(
+        "csrw sepc, {sepc}",
+        "csrw sstatus, {sstatus}",
+        "sret",
+        sepc = in(reg) USER_BASE,
+        sstatus = in(reg) SSTATUS_SPIE,
+    )}
+}
+
+// pub fn create_process(pc: usize) -> usize {
+pub fn create_process(image: *const u8, image_size: usize) -> usize {
     let mut procs = PROCS.0.lock();
 
     // Find an unused process control structure.
@@ -88,7 +106,7 @@ pub fn create_process(pc: usize) -> usize {
     // Stack callee-saved registers. These register values will be restored in
     // the first context switch in switch_context.
     let callee_saved_regs: [usize; 13] = [
-        pc,            // ra
+        user_entry as usize,            // ra
         0,             // s0
         0,             // s1
         0,             // s2
@@ -121,11 +139,43 @@ pub fn create_process(pc: usize) -> usize {
         map_page(page_table.as_mut(), VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
     }
 
+    process.page_table = Some(page_table);
+
+    // Map user pages.
+    let aligned_size = align_up(image_size, PAGE_SIZE);
+
+    // Allocate and initialize the image data safely
+    let image_slice = unsafe {
+        slice::from_raw_parts(image, image_size)
+    };
+
+    let mut image_vec = image_slice.to_vec();
+    image_vec.resize(aligned_size, 0);
+
+    let image_data = Box::leak(image_vec.into_boxed_slice());
+
+    // Extract page table reference once
+    let page_table = process.page_table.as_mut()
+    .expect("page table must be initialized before mapping user pages");
+
+    // Map each page
+    for (i, page_chunk) in image_data.chunks_mut(PAGE_SIZE).enumerate() {
+        let vaddr = VAddr::new(USER_BASE + i * PAGE_SIZE);
+        let paddr = PAddr::new(page_chunk.as_mut_ptr() as usize);
+
+        map_page(
+            page_table,
+            vaddr,
+            paddr,
+            PAGE_U | PAGE_R | PAGE_W | PAGE_X,
+        );
+    }
+
     // Initialise fields.
     process.pid = i + 1;
     process.state = State::Runnable;
     process.sp = VAddr::new(&raw const process.stack[callee_saved_regs_start] as usize);
-    process.page_table = Some(page_table);
+
 
     process.pid
 }

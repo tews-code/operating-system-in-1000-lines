@@ -3,8 +3,6 @@
 #![no_std]
 #![no_main]
 
-use core::arch::asm;
-
 #[expect(unused_imports)]
 use user;
 

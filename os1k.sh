@@ -10,6 +10,8 @@ echo $CWD;
 
 if [ $1 == "clean" ]; then
     cargo clean;
+    rm -f shell.bin;
+    rm -f shell.bin.o;
 fi
 
 
@@ -20,6 +22,7 @@ if [ $1 == "check" ]; then
     $OBJCOPY --set-section-flags=.bss=alloc,contents \
         --output-target=binary \
         shell shell.bin;
+    cp shell.bin $CWD;
     $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
     file shell.bin.o;
     cp shell.bin.o $CWD;
@@ -33,6 +36,8 @@ if [ $1 == "build" ]; then
     $OBJCOPY --set-section-flags=.bss=alloc,contents \
         --output-target=binary \
         shell shell.bin;
+    # For build, let's make a copy of shell.bin in case of debugging
+    cp shell.bin $CWD;
     $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
     file shell.bin.o;
     cp shell.bin.o $CWD;
@@ -51,5 +56,5 @@ fi
 
 if [ $1 == "cleanandrun" ]; then
     ./$0 clean;
-    cargo run;
+    ./$0 run;
 fi
