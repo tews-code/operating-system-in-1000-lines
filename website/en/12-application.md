@@ -222,6 +222,8 @@ echo $CWD;
 
 if [ $1 == "clean" ]; then
     cargo clean;
+    rm -f shell.bin;
+    rm -f shell.bin.o;
 fi
 
 
@@ -232,6 +234,7 @@ if [ $1 == "check" ]; then
     $OBJCOPY --set-section-flags=.bss=alloc,contents \
         --output-target=binary \
         shell shell.bin;
+    cp shell.bin $CWD;
     $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
     file shell.bin.o;
     cp shell.bin.o $CWD;
@@ -245,6 +248,8 @@ if [ $1 == "build" ]; then
     $OBJCOPY --set-section-flags=.bss=alloc,contents \
         --output-target=binary \
         shell shell.bin;
+    # For build, let's make a copy of shell.bin in case of debugging
+    cp shell.bin $CWD;
     $OBJCOPY -Ibinary -Oelf32-littleriscv shell.bin shell.bin.o;
     file shell.bin.o;
     cp shell.bin.o $CWD;
@@ -263,7 +268,7 @@ fi
 
 if [ $1 == "cleanandrun" ]; then
     ./$0 clean;
-    cargo run;
+    ./$0 run;
 fi
 ```
 The first `$OBJCOPY` command converts the executable file (in ELF format) to raw binary format. A raw binary is the actual content that will be expanded in memory from the base address (in this case, `0x1000000`). The OS can prepare the application in memory simply by copying the contents of the raw binary. Common OSes use formats like ELF, where memory contents and their mapping information are separate, but in this book, we'll use raw binary for simplicity.
