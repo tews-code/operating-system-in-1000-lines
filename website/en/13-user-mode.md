@@ -4,7 +4,16 @@ In this chapter, we'll run the application we created in the previous chapter.
 
 ## Extracting the executable file
 
-In executable file formats like ELF, the load address is stored in its file header (program header in ELF). However, since our application's execution image is a raw binary, we need to prepare it with a fixed value like this:
+In executable file formats like ELF, the load address is stored in its file header (program header in ELF). However, since our application's execution image is a raw binary, we need to prepare it with a fixed value. 
+
+We will create a process for the application, so we add this to `kernel/src/process.rs` like this:
+
+```rust [kernel/src/process.rs]
+// The base virtual address of an application image. This needs to match the
+// starting address defined in `user.ld`.
+const USER_BASE: usize = 0x1000000;
+
+```
 
 ```c [kernel.h]
 // The base virtual address of an application image. This needs to match the
