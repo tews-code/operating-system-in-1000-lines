@@ -6,34 +6,43 @@ In this chapter, we will implement *"system calls"* that allow applications to i
 
 Invoking system call is quite similar to [the SBI call implementation](/en/05-hello-world#say-hello-to-sbi) we've seen before:
 
-```c [user.c]
-int syscall(int sysno, int arg0, int arg1, int arg2) {
-    register int a0 __asm__("a0") = arg0;
-    register int a1 __asm__("a1") = arg1;
-    register int a2 __asm__("a2") = arg2;
-    register int a3 __asm__("a3") = sysno;
+```rust [user/src/lib.rs]
+use common::{
+    SYS_PUTBYTE,
+};
 
-    __asm__ __volatile__("ecall"
-                         : "=r"(a0)
-                         : "r"(a0), "r"(a1), "r"(a2), "r"(a3)
-                         : "memory");
+pub fn sys_call(sysno: usize, arg0: isize, arg1: isize, arg2: isize, arg3: isize) -> isize {
+    let a0: isize;
+    unsafe{asm!(
+        "ecall",
+        inout("a0") arg0 => a0,
+        in("a1") arg1,
+        in("a2") arg2,
+        in("a3") arg3,
+        in("a4") sysno,
+    )}
+    a0
+}
 
-    return a0;
+#[unsafe(no_mangle)]
+pub fn put_byte(b: u8) -> Result<(), isize> {
+    let result = sys_call(SYS_PUTBYTE, b as isize, 0, 0, 0);
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(result)
+    }
 }
 ```
 
-The `syscall` function sets the system call number in the `a3` register and the system call arguments in the `a0` to `a2` registers, then executes the `ecall` instruction. The `ecall` instruction is a special instruction used to delegate processing to the kernel. When the `ecall` instruction is executed, an exception handler is called, and control is transferred to the kernel. The return value from the kernel is set in the `a0` register.
+The `syscall` function sets the system call number in the `a4` register and the system call arguments in the `a0` to `a3` registers, then executes the `ecall` instruction. The `ecall` instruction is a special instruction used to delegate processing to the kernel. When the `ecall` instruction is executed, an exception handler is called, and control is transferred to the kernel. The return value from the kernel is set in the `a0` register.
 
 The first system call we will implement is `putchar`, which outputs a character, via system call. It takes a character as the first argument. For the second and subsequent unused arguments are set to 0:
 
-```c [common.h]
-#define SYS_PUTCHAR 1
-```
+```rust [common/src/lib.rs]
+...
+pub const SYS_PUTBYTE: usize = 1;
 
-```c [user.c] {2}
-void putchar(char ch) {
-    syscall(SYS_PUTCHAR, ch, 0, 0);
-}
 ```
 
 ## Handle `ecall` instruction in the kernel
