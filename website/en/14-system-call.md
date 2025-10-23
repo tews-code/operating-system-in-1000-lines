@@ -212,33 +212,46 @@ The implementation of the `get_char` system call repeatedly calls the SBI until 
 
 Let's write a shell with a simple command `hello`, which displays `Hello world from shell!`:
 
-```c [shell.c]
-void main(void) {
-    while (1) {
-prompt:
-        printf("> ");
-        char cmdline[128];
-        for (int i = 0;; i++) {
-            char ch = getchar();
-            putchar(ch);
-            if (i == sizeof(cmdline) - 1) {
-                printf("command line too long\n");
-                goto prompt;
-            } else if (ch == '\r') {
-                printf("\n");
-                cmdline[i] = '\0';
+```rust [user/src/bin/shell.rs]
+...
+fn main() {
+    loop {
+        print!("> ");
+        let mut cmdline = [b'\n'; 128];
+        let mut pos = 0;
+        loop {
+            let Some(ch) = get_char() else {
                 break;
-            } else {
-                cmdline[i] = ch;
+            };
+            let byte = ch as u8;
+            let _ = unsafe{put_byte(byte)};
+            match byte {
+                b'\r' => { // On the debug console the newline is \r
+                    println!();
+                    break;
+                },
+                _ => {
+                    cmdline[pos] = byte;
+                    pos += 1;
+                }
             }
         }
 
-        if (strcmp(cmdline, "hello") == 0)
-            printf("Hello world from shell!\n");
-        else
-            printf("unknown command: %s\n", cmdline);
+        let cmdline_str = str::from_utf8(&cmdline)
+            .expect("command line text valid UTF8")
+            .trim();
+
+        match cmdline_str {
+            "hello" => {
+                println!("Hello world from the shell! 🐚");
+            },
+            _ => {
+                println!("unknown command: {}", cmdline_str);
+            },
+        }
     }
 }
+
 ```
 
 It reads characters until a newline comes, and checks if the entered string matches the command name.
