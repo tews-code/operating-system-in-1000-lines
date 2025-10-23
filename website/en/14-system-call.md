@@ -53,6 +53,11 @@ Next, update the trap handler to handle `ecall` instruction in `kernel/src/entry
 
 ```rust [kernel/src/entry.rs] {2, 10-16}
 ...
+use common::SYS_PUTBYTE;
+
+use crate::sbi::put_byte;
+use crate::{read_csr, write_csr};
+
 const SCAUSE_ECALL: usize = 8;
 ...
 #[unsafe(no_mangle)]
