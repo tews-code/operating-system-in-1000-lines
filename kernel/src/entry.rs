@@ -2,8 +2,12 @@
 
 use core::arch::naked_asm;
 
-#[allow(unused_imports)]
+use common::SYS_PUTBYTE;
+
+use crate::sbi::put_byte;
 use crate::{read_csr, write_csr};
+
+const SCAUSE_ECALL: usize = 8;
 
 #[repr(C, packed)]
 struct TrapFrame{
@@ -125,12 +129,32 @@ pub unsafe extern "C" fn kernel_entry() {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn handle_trap(_f: &mut TrapFrame) {
+extern "C" fn handle_trap(f: &mut TrapFrame) {
     let scause = read_csr!("scause");
     let stval = read_csr!("stval");
-    let user_pc = read_csr!("sepc");
+    let mut user_pc = read_csr!("sepc");
 
-    panic!("unexpected trap scause=0x{:x}, stval=0x{:x}, sepc=0x{:x}", scause, stval, user_pc);
+    if scause == SCAUSE_ECALL {
+        handle_syscall(f);
+        user_pc += 4;
+    } else {
+            panic!("unexpected trap scause=0x{:x}, stval=0x{:x}, sepc=0x{:x}", scause, stval, user_pc);
+    }
+
+    write_csr!("sepc", user_pc);
+}
+
+fn handle_syscall(f: &mut TrapFrame) {
+    let sysno = f.a4;
+    match sysno {
+        SYS_PUTBYTE => {  // Match what user code sends
+            match put_byte(f.a0 as u8) {
+                Ok(_) => f.a0 = 0,     // Set return value to 0 (success)
+                Err(e) => f.a0 = e as usize,    // Set return value to error code
+            }
+        },
+        _ => {panic!("unexpected syscall sysno={:x}", sysno);},
+    }
 }
 
 #[macro_export]

@@ -3,10 +3,11 @@
 #![no_std]
 #![no_main]
 
-#[expect(unused_imports)]
-use user;
+use user::println;
 
 #[unsafe(no_mangle)]
 fn main() {
+    println!("Hello world from the shell!");
+
     loop {}
 }

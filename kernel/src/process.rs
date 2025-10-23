@@ -2,7 +2,6 @@
 
 use alloc::slice;
 use alloc::boxed::Box;
-use alloc::vec::Vec;
 
 use core::arch::{asm, naked_asm};
 use core::fmt;
@@ -93,7 +92,6 @@ fn user_entry() {
     )}
 }
 
-// pub fn create_process(pc: usize) -> usize {
 pub fn create_process(image: *const u8, image_size: usize) -> usize {
     let mut procs = PROCS.0.lock();
 
@@ -143,22 +141,15 @@ pub fn create_process(image: *const u8, image_size: usize) -> usize {
 
     // Map user pages.
     let aligned_size = align_up(image_size, PAGE_SIZE);
-
-    // Allocate and initialize the image data safely
     let image_slice = unsafe {
         slice::from_raw_parts(image, image_size)
     };
-
     let mut image_vec = image_slice.to_vec();
     image_vec.resize(aligned_size, 0);
-
     let image_data = Box::leak(image_vec.into_boxed_slice());
-
-    // Extract page table reference once
     let page_table = process.page_table.as_mut()
     .expect("page table must be initialized before mapping user pages");
 
-    // Map each page
     for (i, page_chunk) in image_data.chunks_mut(PAGE_SIZE).enumerate() {
         let vaddr = VAddr::new(USER_BASE + i * PAGE_SIZE);
         let paddr = PAddr::new(page_chunk.as_mut_ptr() as usize);
@@ -175,7 +166,6 @@ pub fn create_process(image: *const u8, image_size: usize) -> usize {
     process.pid = i + 1;
     process.state = State::Runnable;
     process.sp = VAddr::new(&raw const process.stack[callee_saved_regs_start] as usize);
-
 
     process.pid
 }
