@@ -130,55 +130,68 @@ Hello world from the shell!
 
 Congratulations! You've successfully implemented the system call! But we're not done yet. Let's implement more system calls!
 
-## Receive characters from keyboard (`getchar` system call)
+## Receive characters from keyboard (`get_char` system call)
 
 Our next goal is to implement a shell. To do that, we need to be able to receive characters from the keyboard.
 
-SBI provides an interface to read "input to the debug console". If there is no input, it returns `-1`:
+SBI provides an interface to read "input to the debug console". If there is no input, it returns `-1`. Add this to `kernel/src/sbi.rs`:
 
-```c [kernel.c]
-long getchar(void) {
-    struct sbiret ret = sbi_call(0, 0, 0, 0, 0, 0, 0, 2);
-    return ret.error;
+```rust [kernel/src/sbi.rs]
+...
+pub fn get_char() -> Result<i32, i32> {
+    let ret = sbi_call(0, EID_CONSOLE_GETCHAR)?;
+    Ok(ret)
 }
 ```
 
-The `getchar` system call is implemented as follows:
+The `get_char` system call is implemented as follows: First, add the command to the common library:
 
-```c [common.h]
-#define SYS_GETCHAR 2
+```rust [common/src/lib.rs] {3}
+...
+pub const SYS_PUTBYTE: usize = 1;
+pub const SYS_GETCHAR: usize = 2;
+
 ```
+And then add the system call to the user library:
 
-```c [user.c]
-int getchar(void) {
-    return syscall(SYS_GETCHAR, 0, 0, 0);
-}
-```
-
-```c [user.h]
-int getchar(void);
-```
-
-```c [kernel.c] {3-13}
-void handle_syscall(struct trap_frame *f) {
-    switch (f->a3) {
-        case SYS_GETCHAR:
-            while (1) {
-                long ch = getchar();
-                if (ch >= 0) {
-                    f->a0 = ch;
-                    break;
-                }
-
-                yield();
-            }
-            break;
-        /* omitted */
+```rust [user/src/lib.rs]
+...
+pub fn get_char() -> Option<usize> {
+    let ch = sys_call(SYS_GETCHAR, 0, 0, 0, 0);
+    if ch == -1 {
+        None
+    } else {
+        Some(ch as usize)
     }
 }
+
+```
+And then add the handler in the kernel entry file:
+
+```rust [kernel/src/entry.rs] {11-19}
+...
+fn handle_syscall(f: &mut TrapFrame) {
+    let sysno = f.a4;
+    match sysno {
+        SYS_PUTBYTE => {  // Match what user code sends
+            match put_byte(f.a0 as u8) {
+                Ok(_) => f.a0 = 0,     // Set return value to 0 (success)
+                Err(e) => f.a0 = e as usize,    // Set return value to error code
+            }
+        },
+        SYS_GETCHAR => {
+            loop {
+                if let Ok(ch) = get_char() {
+                    f.a0 = ch as usize;
+                    break;
+                }
+                yield_now();
+            }
+        },
+
 ```
 
-The implementation of the `getchar` system call repeatedly calls the SBI until a character is input. However, simply repeating this prevents other processes from running, so we call the `yield` system call to yield the CPU to other processes.
+The implementation of the `get_char` system call repeatedly calls the SBI until a character is input. However, simply repeating this prevents other processes from running, so we call the `yield` system call to yield the CPU to other processes.
 
 > [!NOTE]
 >
