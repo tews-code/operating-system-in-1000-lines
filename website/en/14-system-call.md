@@ -49,51 +49,57 @@ pub const SYS_PUTBYTE: usize = 1;
 
 Next, update the trap handler to handle `ecall` instruction:
 
-```c [kernel.h]
-#define SCAUSE_ECALL 8
-```
+```rust [kernel/src/entry.rs] {2, 10-16}
+...
+const SCAUSE_ECALL: usize = 8;
+...
+#[unsafe(no_mangle)]
+extern "C" fn handle_trap(trap_frame: &mut TrapFrame) {
+    let scause = read_csr!("scause");
+    let stval = read_csr!("stval");
+    let mut user_pc = read_csr!("sepc");
 
-```c [kernel.c] {5-7,12}
-void handle_trap(struct trap_frame *f) {
-    uint32_t scause = READ_CSR(scause);
-    uint32_t stval = READ_CSR(stval);
-    uint32_t user_pc = READ_CSR(sepc);
-    if (scause == SCAUSE_ECALL) {
-        handle_syscall(f);
+    if scause == SCAUSE_ECALL {
+        handle_syscall(trap_frame);
         user_pc += 4;
     } else {
-        PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+        panic!("unexpected trap scause={:x}, stval={:x}, sepc={:x}", scause,  stval, user_pc);
     }
 
-    WRITE_CSR(sepc, user_pc);
+    write_csr!("sepc", user_pc);
 }
 ```
-
 Whether the `ecall` instruction was called can be determined by checking the value of `scause`. Besides calling the `handle_syscall` function, we also add 4 (the size of `ecall` instruction) to the value of `sepc`. This is because `sepc` points to the program counter that caused the exception, which points to the `ecall` instruction. If we don't change it, the kernel goes back to the same place, and the `ecall` instruction is executed repeatedly.
 
 ## System call handler
 
 The following system call handler is called from the trap handler. It receives a structure of "registers at the time of exception" that was saved in the trap handler:
 
-```c [kernel.c]
-void handle_syscall(struct trap_frame *f) {
-    switch (f->a3) {
-        case SYS_PUTCHAR:
-            putchar(f->a0);
-            break;
-        default:
-            PANIC("unexpected syscall a3=%x\n", f->a3);
+```rust [kernel/src/entry.rs]
+fn handle_syscall(f: &mut TrapFrame) {
+    let sysno = f.a4;
+    match sysno {
+        SYS_PUTBYTE => {  // Match what user code sends
+            match put_byte(f.a0 as u8) {
+                Ok(_) => f.a0 = 0,     // Set return value to 0 (success)
+                Err(e) => f.a0 = e as usize,    // Set return value to error code
+            }
+        },
+        _ => {panic!("unexpected syscall sysno={:x}", sysno);},
     }
 }
 ```
 
-It determines the type of system call by checking the value of the `a3` register. Now we only have one system call, `SYS_PUTCHAR`, which simply outputs the character stored in the `a0` register.
+It determines the type of system call by checking the value of the `a4` register. Now we only have one system call, `SYS_PUTCHAR`, which simply outputs the byte stored in the `a0` register.
 
 ## Test the system call
 
 You've implemented the system call. Let's try it out!
 
-Do you remember the implementation of the `printf` function in `common.c`? It calls the `putchar` function to display characters. Since we have just implemented `putchar` in the userland library, we can use it as is:
+Do you remember the implementation of the `println!` macro in `common`? It calls the `put_char` function to display characters. Since we have just implemented `put_char` in the userland library, we can use it as is:
+
+```rust [user/src/bin/shell.rs]
+```
 
 ```c [shell.c] {2}
 void main(void) {
