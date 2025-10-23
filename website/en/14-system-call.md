@@ -141,8 +141,11 @@ SBI provides an interface to read "input to the debug console". If there is no i
 const EID_CONSOLE_PUTCHAR: c_long = 1;
 const EID_CONSOLE_GETCHAR: c_long = 2;
 ...
-pub fn get_char() -> Result<i32, i32> {
-    let ret = sbi_call(0, EID_CONSOLE_GETCHAR)?;
+
+pub fn get_char() -> Result<isize, isize> {
+    let ret = unsafe {
+        sbi_call(0, EID_CONSOLE_GETCHAR)?
+    };
     Ok(ret)
 }
 ```
