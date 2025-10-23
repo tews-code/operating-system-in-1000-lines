@@ -136,7 +136,10 @@ Our next goal is to implement a shell. To do that, we need to be able to receive
 
 SBI provides an interface to read "input to the debug console". If there is no input, it returns `-1`. Add this to `kernel/src/sbi.rs`:
 
-```rust [kernel/src/sbi.rs]
+```rust [kernel/src/sbi.rs] {3, 5-8}
+...
+const EID_CONSOLE_PUTCHAR: c_long = 1;
+const EID_CONSOLE_GETCHAR: c_long = 2;
 ...
 pub fn get_char() -> Result<i32, i32> {
     let ret = sbi_call(0, EID_CONSOLE_GETCHAR)?;
