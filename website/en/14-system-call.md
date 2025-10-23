@@ -4,7 +4,7 @@ In this chapter, we will implement *"system calls"* that allow applications to i
 
 ## User library
 
-Invoking system call is quite similar to [the SBI call implementation](/en/05-hello-world#say-hello-to-sbi) we've seen before:
+Invoking system call is quite similar to [the SBI call implementation](/en/05-hello-world#say-hello-to-sbi) we've seen before. Let's add this to the library at `user/src/lib.rs`.
 
 ```rust [user/src/lib.rs]
 use common::{
