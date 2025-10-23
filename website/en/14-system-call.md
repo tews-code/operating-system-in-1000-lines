@@ -49,7 +49,7 @@ pub const SYS_PUTBYTE: usize = 1;
 
 ## Handle `ecall` instruction in the kernel
 
-Next, update the trap handler to handle `ecall` instruction:
+Next, update the trap handler to handle `ecall` instruction in `kernel/src/entry.rs`:
 
 ```rust [kernel/src/entry.rs] {2, 10-16}
 ...
