@@ -37,12 +37,14 @@ pub fn put_byte(b: u8) -> Result<(), isize> {
 
 The `syscall` function sets the system call number in the `a4` register and the system call arguments in the `a0` to `a3` registers, then executes the `ecall` instruction. The `ecall` instruction is a special instruction used to delegate processing to the kernel. When the `ecall` instruction is executed, an exception handler is called, and control is transferred to the kernel. The return value from the kernel is set in the `a0` register.
 
-The first system call we will implement is `putchar`, which outputs a character, via system call. It takes a character as the first argument. For the second and subsequent unused arguments are set to 0:
+The first system call we will implement is `put_byte`, which outputs a byte, via system call. It takes a character as the first argument. For the second and subsequent unused arguments are set to 0. 
+
+We add this to our common library, so that both the kernel and user library use the same definition. Add this to `common/src/lib.rs`:
 
 ```rust [common/src/lib.rs]
 ...
 pub const SYS_PUTBYTE: usize = 1;
-
+...
 ```
 
 ## Handle `ecall` instruction in the kernel
