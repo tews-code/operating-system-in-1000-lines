@@ -174,7 +174,12 @@ pub fn get_char() -> Option<usize> {
 ```
 And then add the handler in the kernel entry file:
 
-```rust [kernel/src/entry.rs] {11-19}
+```rust [kernel/src/entry.rs] {2-3, 13-21}]
+...
+use crate::sbi::{put_byte, get_char};
+use crate::scheduler::yield_now;
+...
+use crate::sbi::{put_byte, get_char};
 ...
 fn handle_syscall(f: &mut TrapFrame) {
     let sysno = f.a4;
