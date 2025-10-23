@@ -98,14 +98,21 @@ It determines the type of system call by checking the value of the `a4` register
 
 You've implemented the system call. Let's try it out!
 
-Do you remember the implementation of the `println!` macro in `common`? It calls the `put_char` function to display characters. Since we have just implemented `put_char` in the userland library, we can use it as is:
+Do you remember the implementation of the `println!` macro in `common`? It calls the `put_char` function to display characters. Since we have just implemented `put_char` in the userland library, we can use it as is in `user/src/bin/shell.rs`:
 
 ```rust [user/src/bin/shell.rs]
-```
+//! os1k shell
 
-```c [shell.c] {2}
-void main(void) {
-    printf("Hello World from shell!\n");
+#![no_std]
+#![no_main]
+
+use user::println;
+
+#[unsafe(no_mangle)]
+fn main() {
+    println!("Hello world from the shell!");
+
+    loop {}
 }
 ```
 
@@ -113,7 +120,7 @@ You'll see the charming message on the screen:
 
 ```
 $ ./run.sh
-Hello World from shell!
+Hello world from the shell!
 ```
 
 Congratulations! You've successfully implemented the system call! But we're not done yet. Let's implement more system calls!
