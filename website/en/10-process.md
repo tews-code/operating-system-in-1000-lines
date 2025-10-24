@@ -316,7 +316,7 @@ use crate::process::{create_process, PROCS, PROCS_MAX, State, switch_context};
 use crate::spinlock::SpinLock;
     
 static IDLE_PROC: SpinLock<Option<usize>> = SpinLock::new(None);    // Idle process
-static CURRENT_PROC: SpinLock<Option<usize>> = SpinLock::new(None); // Currently running process
+pub static CURRENT_PROC: SpinLock<Option<usize>> = SpinLock::new(None); // Currently running process
 const IDLE_PID: usize = 0; // idle
 
 pub fn yield_now() {
