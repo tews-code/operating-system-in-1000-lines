@@ -61,7 +61,7 @@ impl VAddr {
     }
 
     pub const fn field_raw_ptr(&mut self) -> *mut usize {
-        &raw mut self.0 as *mut usize
+        &raw mut self.0
     }
 }
 
