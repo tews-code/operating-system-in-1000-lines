@@ -306,49 +306,79 @@ Your OS is starting to look like a real OS! How fast you've come this far!
 
 Lastly, let's implement `exit` system call, which terminates the process:
 
-```c [common.h]
-#define SYS_EXIT    3
-```
+In `common` we add the new system call:
 
-```c [user.c] {2-3}
-__attribute__((noreturn)) void exit(void) {
-    syscall(SYS_EXIT, 0, 0, 0);
-    for (;;); // Just in case!
+```rust [common/src/lib.rs]
+pub const SYS_EXIT: usize = 3;
+```
+And in `user` we add the system call function:
+
+```rust [user/src/lib.rs]
+
+pub fn exit() -> ! {
+    let _ = sys_call(SYS_EXIT, 0, 0, 0, 0);
+    unreachable!("just in case!");
+}
+```
+On the kernel side, we first create a new process state of `Exited` in `process`:
+
+```rust [kernel/src/process.rs] {5}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum State {
+    Unused,     // Unused process control structure
+    Runnable,   // Runnable process
+    Exited,
 }
 ```
 
-```c [kernel.h]
-#define PROC_EXITED   2
+Then we add the handler in `entry.rs`:
+
+```rust [kernel/src/entry.rs] {4, 7, 9, 13-22}
+use common::{
+    SYS_PUTBYTE,
+    SYS_GETCHAR,
+    SYS_EXIT
+};
+
+use crate::process::{PROCS, State};
+use crate::sbi::{put_byte, get_char};
+use crate::scheduler::{yield_now, CURRENT_PROC};
+...
+fn handle_syscall(f: &mut TrapFrame) {
+    ...
+         SYS_EXIT => {
+            let current = CURRENT_PROC.lock()
+                .expect("current process should be running");
+            crate::println!("process {} exited", current);
+            PROCS.0.lock().iter_mut()
+                .find(|p| p.pid == current)
+                .map(|p| p.state = State::Exited);
+            yield_now();
+            unreachable!("unreachable after SYS_EXIT");
+        }
+        /* Omitted */
 ```
 
-```c [kernel.c] {3-7}
-void handle_syscall(struct trap_frame *f) {
-    switch (f->a3) {
-        case SYS_EXIT:
-            printf("process %d exited\n", current_proc->pid);
-            current_proc->state = PROC_EXITED;
-            yield();
-            PANIC("unreachable");
-        /* omitted */
-    }
-}
-```
 
-The system call changes the process state to `PROC_EXITED`, and calls `yield` to give up the CPU to other processes. The scheduler will only execute processes in `PROC_RUNNABLE` state, so it will never return to this process. However, `PANIC` macro is added to cause a panic in case it does return.
+The system call changes the process state to `State::Exited`, and calls `yield_now` to give up the CPU to other processes. The scheduler will only execute processes in `Runnable` state, so it will never return to this process. However, `unreachable` macro is added to cause a panic in case it does return.
 
 > [!TIP]
 >
-> For simplicity, we only mark the process as exited (`PROC_EXITED`). If you want to build a practical OS, it is necessary to free resources held by the process, such as page tables and allocated memory regions.
+> For simplicity, we only mark the process as exited (`State::Exited`). If you want to build a practical OS, it is necessary to free resources held by the process, such as page tables and allocated memory regions.
 
 Add the `exit` command to the shell:
 
-```c [shell.c] {3-4}
-        if (strcmp(cmdline, "hello") == 0)
-            printf("Hello world from shell!\n");
-        else if (strcmp(cmdline, "exit") == 0)
-            exit();
-        else
-            printf("unknown command: %s\n", cmdline);
+```rust [user/src/bin/shell.rs]
+        match cmdline_str {
+            "hello" => {
+                println!("Hello world from the shell! 🐚");
+            },
+            "exit" => {
+                exit();
+            }
+            _ => {
+                println!("unknown command: {}", cmdline_str);
+            },
 ```
 
 You're done! Let's try running it:
@@ -357,8 +387,9 @@ You're done! Let's try running it:
 $ ./run.sh
 
 > exit
-process 2 exited
-PANIC: kernel.c:333: switched to idle process
+process 1 exited
+⚠️ Panic: panicked at kernel/src/main.rs:98:5:
+switched to idle process
 ```
 
 When the `exit` command is executed, the shell process terminates via system call, and there are no other runnable processes remaining. As a result, the scheduler will select the idle process and cause a panic.
