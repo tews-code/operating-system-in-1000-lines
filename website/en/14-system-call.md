@@ -350,9 +350,10 @@ fn handle_syscall(f: &mut TrapFrame) {
             let current = CURRENT_PROC.lock()
                 .expect("current process should be running");
             crate::println!("process {} exited", current);
-            PROCS.0.lock().iter_mut()
-                .find(|p| p.pid == current)
-                .map(|p| p.state = State::Exited);
+            if let Some(p) = PROCS.0.lock().iter_mut()
+                .find(|p| p.pid == current) {
+                    p.state = State::Exited
+                }
             yield_now();
             unreachable!("unreachable after SYS_EXIT");
         }
