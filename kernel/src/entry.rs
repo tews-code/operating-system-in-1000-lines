@@ -2,9 +2,13 @@
 
 use core::arch::naked_asm;
 
-use common::SYS_PUTBYTE;
+use common::{
+    SYS_PUTBYTE,
+    SYS_GETCHAR,
+};
 
-use crate::sbi::put_byte;
+use crate::sbi::{put_byte, get_char};
+use crate::scheduler::yield_now;
 use crate::{read_csr, write_csr};
 
 const SCAUSE_ECALL: usize = 8;
@@ -151,6 +155,15 @@ fn handle_syscall(f: &mut TrapFrame) {
             match put_byte(f.a0 as u8) {
                 Ok(_) => f.a0 = 0,     // Set return value to 0 (success)
                 Err(e) => f.a0 = e as usize,    // Set return value to error code
+            }
+        },
+        SYS_GETCHAR => {
+            loop {
+                if let Ok(ch) = get_char() {
+                    f.a0 = ch as usize;
+                    break;
+                }
+                yield_now();
             }
         },
         _ => {panic!("unexpected syscall sysno={:x}", sysno);},

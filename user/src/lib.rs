@@ -9,6 +9,7 @@ pub use common::{print, println};
 
 use common::{
     SYS_PUTBYTE,
+    SYS_GETCHAR,
 };
 
 // pub mod syscall;
@@ -47,6 +48,15 @@ pub fn put_byte(b: u8) -> Result<(), isize> {
         Ok(())
     } else {
         Err(result)
+    }
+}
+
+pub fn get_char() -> Option<usize> {
+    let ch = sys_call(SYS_GETCHAR, 0, 0, 0, 0);
+    if ch == -1 {
+        None
+    } else {
+        Some(ch as usize)
     }
 }
 

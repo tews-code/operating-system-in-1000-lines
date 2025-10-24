@@ -94,6 +94,8 @@ fn kernel_main() -> ! {
     let shell_size = &raw const _binary_shell_bin_size as usize;  // The symbol _address_ is the size of the binary
     let _ = create_process(shell_start, shell_size);
 
+
+
     yield_now();
 
     panic!("switched to idle process");
