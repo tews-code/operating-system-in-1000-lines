@@ -172,10 +172,9 @@ pub unsafe fn sbi_call(mut arg0: c_int, eid: c_long) -> Result<isize, isize> {
 }
 
 pub fn get_char() -> Result<isize, isize> {
-    let ret = unsafe {
+    unsafe {
         sbi_call(0, EID_CONSOLE_GETCHAR)
-    };
-    ret
+    }
 }
 ```
 
