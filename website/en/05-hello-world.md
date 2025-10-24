@@ -17,16 +17,15 @@ use core::ffi::{c_long, c_int};
 const EID_CONSOLE_PUTCHAR: c_long = 1;
 
 // Safety: Caller must ensure that SBI call does not change machine state, memory mappings etc.
-unsafe fn sbi_call(arg0: c_int, eid: c_long) -> Result<isize, isize> {
-    let result: c_long;
+unsafe fn sbi_call(mut arg0: c_int, eid: c_long) -> Result<isize, isize> {
     unsafe {
         asm!(
             "ecall",
-            inlateout("a0") arg0 => result,
+            inlateout("a0") arg0,
             in("a7") eid,
         );
     }
-    match result {
+    match arg0 {
         0 => Ok(0),
         _ => Err(result as isize),
     }
