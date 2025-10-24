@@ -55,9 +55,43 @@ The newly added options are as follows:
 - `-drive id=drive0`: Defines disk named `drive0`, with `lorem.txt` as the disk image. The disk image format is `raw` (treats the file contents as-is as disk data).
 - `-device virtio-blk-device`: Adds a virtio-blk device with disk `drive0`. `bus=virtio-mmio-bus.0` maps the device into a virtio-mmio bus (virtio over Memory Mapped I/O).
 
-## Define C macros/structs
+## Define Rust macros/structs
 
-First, let's add some virtio-related definitions to `kernel.h`:
+First, let's add some virtio-related definitions to `virtio.rs`:
+
+```rust [kernel/src/virtio.rs]
+//! Virtio for os1k
+
+pub const SECTOR_SIZE: usize =       512;
+const VIRTQ_ENTRY_NUM: usize =       16;
+const VIRTIO_DEVICE_BLK: u32 =       2;
+pub const VIRTIO_BLK_PADDR: u32 = 0x10001000;
+const VIRTIO_REG_MAGIC: u32 =         0x00;
+const VIRTIO_REG_VERSION: u32 =       0x04;
+const VIRTIO_REG_DEVICE_ID: u32 =     0x08;
+const VIRTIO_REG_QUEUE_SEL: u32 =     0x30;
+#[expect(dead_code)]
+const VIRTIO_REG_QUEUE_NUM_MAX: u32 = 0x34;
+const VIRTIO_REG_QUEUE_NUM: u32 =     0x38;
+const VIRTIO_REG_QUEUE_ALIGN: u32 =   0x3c;
+const VIRTIO_REG_QUEUE_PFN: u32 =     0x40;
+#[expect(dead_code)]
+const VIRTIO_REG_QUEUE_READY: u32 =   0x44;
+const VIRTIO_REG_QUEUE_NOTIFY: u32 =  0x50;
+const VIRTIO_REG_DEVICE_STATUS: u32 = 0x70;
+const VIRTIO_REG_DEVICE_CONFIG: u32 = 0x100;
+const VIRTIO_STATUS_ACK: u32 =       1;
+const VIRTIO_STATUS_DRIVER: u32 =    2;
+const VIRTIO_STATUS_DRIVER_OK: u32 = 4;
+const VIRTIO_STATUS_FEAT_OK: u32 =   8;
+const VIRTQ_DESC_F_NEXT: u32 =          1;
+const VIRTQ_DESC_F_WRITE: u32 =         2;
+#[expect(dead_code)]
+const VIRTQ_AVAIL_F_NO_INTERRUPT: u32 = 1;
+const VIRTIO_BLK_T_IN: u32 =  0;
+const VIRTIO_BLK_T_OUT: u32 = 1;
+
+```
 
 ```c [kernel.h]
 #define SECTOR_SIZE       512
