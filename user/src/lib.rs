@@ -10,6 +10,7 @@ pub use common::{print, println};
 use common::{
     SYS_PUTBYTE,
     SYS_GETCHAR,
+    SYS_EXIT,
 };
 
 // pub mod syscall;
@@ -21,11 +22,6 @@ pub fn panic(_panic: &PanicInfo) -> ! {
 
 unsafe extern "C" {
     static __user_stack_top: u8;
-}
-
-#[unsafe(no_mangle)]
-fn exit() -> ! {
-    loop {}
 }
 
 pub fn sys_call(sysno: usize, arg0: isize, arg1: isize, arg2: isize, arg3: isize) -> isize {
@@ -58,6 +54,12 @@ pub fn get_char() -> Option<usize> {
     } else {
         Some(ch as usize)
     }
+}
+
+#[unsafe(no_mangle)]
+pub fn exit() -> ! {
+    let _ = sys_call(SYS_EXIT, 0, 0, 0, 0);
+    unreachable!("just in case!");
 }
 
 #[unsafe(link_section = ".text.start")]

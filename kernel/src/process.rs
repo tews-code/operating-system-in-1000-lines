@@ -22,6 +22,7 @@ pub const PROCS_MAX: usize = 8;         // Maximum number of processes
 pub enum State {
     Unused,     // Unused process control structure
     Runnable,   // Runnable process
+    Exited,
 }
 
 #[derive(Clone, Debug)]

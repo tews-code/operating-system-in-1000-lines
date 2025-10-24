@@ -4,6 +4,7 @@
 #![no_main]
 
 use user::{
+    exit,
     print,
     println,
     get_char,
@@ -42,6 +43,9 @@ fn main() {
             "hello" => {
                 println!("Hello world from the shell! 🐚");
             },
+            "exit" => {
+                exit();
+            }
             _ => {
                 println!("unknown command: {}", cmdline_str);
             },

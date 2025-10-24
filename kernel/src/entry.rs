@@ -5,10 +5,12 @@ use core::arch::naked_asm;
 use common::{
     SYS_PUTBYTE,
     SYS_GETCHAR,
+    SYS_EXIT
 };
 
+use crate::process::{PROCS, State};
 use crate::sbi::{put_byte, get_char};
-use crate::scheduler::yield_now;
+use crate::scheduler::{yield_now, CURRENT_PROC};
 use crate::{read_csr, write_csr};
 
 const SCAUSE_ECALL: usize = 8;
@@ -166,6 +168,17 @@ fn handle_syscall(f: &mut TrapFrame) {
                 yield_now();
             }
         },
+        SYS_EXIT => {
+            let current = CURRENT_PROC.lock()
+                .expect("current process should be running");
+            crate::println!("process {} exited", current);
+            if let Some(p) = PROCS.0.lock().iter_mut()
+                .find(|p| p.pid == current) {
+                    p.state = State::Exited
+                }
+            yield_now();
+            unreachable!("unreachable after SYS_EXIT");
+        }
         _ => {panic!("unexpected syscall sysno={:x}", sysno);},
     }
 }
