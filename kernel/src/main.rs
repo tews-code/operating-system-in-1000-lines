@@ -5,10 +5,8 @@
 
 pub extern crate alloc;
 
-use core::arch::{asm, naked_asm};
+use core::arch::naked_asm;
 use core::ptr::write_bytes;
-
-use crate::process::PROCS;
 
 #[allow(unused_imports)]
 use common::{print, println};
@@ -27,7 +25,6 @@ mod spinlock;
 use crate::entry::kernel_entry;
 use crate::process::create_process;
 use crate::scheduler::yield_now;
-use crate::spinlock::SpinLock;
 
 // Safety: Symbols created by linker script
 unsafe extern "C" {
@@ -41,32 +38,32 @@ unsafe extern "C" {
     static _binary_shell_bin_size: u8;
 }
 
-fn delay() {
-    for _ in 0..300_000_000usize {
-        unsafe{asm!("nop");} // do nothing
-    }
-}
-
-static PROC_A: SpinLock<Option<usize>> = SpinLock::new(None);
-static PROC_B: SpinLock<Option<usize>> = SpinLock::new(None);
-
-fn proc_a_entry() {
-    println!("starting process A");
-    loop {
-        print!("🐈");
-        yield_now();
-        delay()
-    }
-}
-
-fn proc_b_entry() {
-    println!("starting process B");
-    loop {
-        print!("🐕");
-        yield_now();
-        delay()
-    }
-}
+// fn delay() {
+//     for _ in 0..300_000_000usize {
+//         unsafe{asm!("nop");} // do nothing
+//     }
+// }
+//
+// static PROC_A: SpinLock<Option<usize>> = SpinLock::new(None);
+// static PROC_B: SpinLock<Option<usize>> = SpinLock::new(None);
+//
+// fn proc_a_entry() {
+//     println!("starting process A");
+//     loop {
+//         print!("🐈");
+//         yield_now();
+//         delay()
+//     }
+// }
+//
+// fn proc_b_entry() {
+//     println!("starting process B");
+//     loop {
+//         print!("🐕");
+//         yield_now();
+//         delay()
+//     }
+// }
 
 
 #[unsafe(no_mangle)]
@@ -90,7 +87,7 @@ fn kernel_main() -> ! {
     // });
 
     // new!
-    let shell_start = &raw const _binary_shell_bin_start as *const u8 as *mut u8;
+    let shell_start = &raw const _binary_shell_bin_start as *mut u8;
     let shell_size = &raw const _binary_shell_bin_size as usize;  // The symbol _address_ is the size of the binary
     let _ = create_process(shell_start, shell_size);
 

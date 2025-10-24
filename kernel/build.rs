@@ -7,5 +7,5 @@ fn main() {
     println!("cargo:rerun-if-changed=kernel.ld");
 
     // Link the shell binary
-    println!("cargo:rustc-link-arg={}", "shell.bin.o");
+    println!("cargo:rustc-link-arg=shell.bin.o");
 }

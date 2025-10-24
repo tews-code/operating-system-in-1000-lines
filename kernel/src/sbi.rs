@@ -47,8 +47,7 @@ pub fn put_byte(b: u8) -> Result<isize, isize> {
 }
 
 pub fn get_char() -> Result<isize, isize> {
-    let ret = unsafe {
+    unsafe {
         sbi_call(0, EID_CONSOLE_GETCHAR)
-    };
-    ret
+    }
 }
