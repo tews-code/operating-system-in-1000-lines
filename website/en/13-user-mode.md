@@ -94,7 +94,7 @@ fn kernel_main() -> ! {
     ...
 
     // new!
-    let shell_start = &raw const _binary_shell_bin_start as *const u8 as *mut u8;
+    let shell_start = &raw const _binary_shell_bin_start as *mut u8;
     let shell_size = &raw const _binary_shell_bin_size as usize;  // The symbol _address_ is the size of the binary
     let _ = create_process(shell_start, shell_size);
 
