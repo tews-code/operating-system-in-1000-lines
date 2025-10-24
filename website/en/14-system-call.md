@@ -369,7 +369,14 @@ The system call changes the process state to `State::Exited`, and calls `yield_n
 
 Add the `exit` command to the shell:
 
-```rust [user/src/bin/shell.rs]
+```rust [user/src/bin/shell.rs] {2, 11-13}
+ use user::{
+    exit,
+    print,
+...
+
+fn handle_syscall(f: &mut TrapFrame) {
+    ...
         match cmdline_str {
             "hello" => {
                 println!("Hello world from the shell! 🐚");
