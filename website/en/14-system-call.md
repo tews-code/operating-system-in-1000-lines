@@ -136,17 +136,46 @@ Our next goal is to implement a shell. To do that, we need to be able to receive
 
 SBI provides an interface to read "input to the debug console". If there is no input, it returns `-1`. Add this to `kernel/src/sbi.rs`:
 
-```rust [kernel/src/sbi.rs] {3, 5-8}
+```rust [kernel/src/sbi.rs] {2-3, 13-19}
 ...
 const EID_CONSOLE_PUTCHAR: c_long = 1;
 const EID_CONSOLE_GETCHAR: c_long = 2;
 ...
+pub unsafe fn sbi_call(mut arg0: c_int, eid: c_long) -> Result<isize, isize> {
+    unsafe {
+        asm!(
+            "ecall",
+            inlateout("a0") arg0,
+            in("a7") eid,
+        );
+    }
+
+    match eid {
+        EID_CONSOLE_PUTCHAR => {
+            if arg0 == 0 {
+                Ok(0)
+            } else {
+                Err(arg0 as isize)
+            }
+        },
+        EID_CONSOLE_GETCHAR => {
+            if arg0 != -1 {
+                Ok(arg0 as isize)
+            } else {
+                Err(-1)
+            }
+        },
+        _ => {
+            panic!("Unknown SBI EID");
+        }
+    }
+}
 
 pub fn get_char() -> Result<isize, isize> {
     let ret = unsafe {
-        sbi_call(0, EID_CONSOLE_GETCHAR)?
+        sbi_call(0, EID_CONSOLE_GETCHAR)
     };
-    Ok(ret)
+    ret
 }
 ```
 
@@ -266,7 +295,7 @@ Let's try typing `hello` command:
 $ ./run.sh
 
 > hello
-Hello world from shell!
+Hello world from the shell! 🐚
 ```
 
 Your OS is starting to look like a real OS! How fast you've come this far!
