@@ -11,6 +11,8 @@ use common::{
     SYS_PUTBYTE,
     SYS_GETCHAR,
     SYS_EXIT,
+    SYS_READFILE,
+    SYS_WRITEFILE,
 };
 
 // pub mod syscall;
@@ -60,6 +62,14 @@ pub fn get_char() -> Option<usize> {
 pub fn exit() -> ! {
     let _ = sys_call(SYS_EXIT, 0, 0, 0, 0);
     unreachable!("just in case!");
+}
+
+pub fn readfile(filename: &str, buf: &mut [u8]) {
+    let _ = sys_call(SYS_READFILE, filename.as_ptr() as isize, filename.len() as isize, buf.as_mut_ptr() as isize, buf.len() as isize);
+}
+
+pub fn writefile(filename: &str, buf: &[u8]) {
+    let _ = sys_call(SYS_WRITEFILE, filename.as_ptr() as isize, filename.len() as isize,  buf.as_ptr() as isize, buf.len() as isize);
 }
 
 #[unsafe(link_section = ".text.start")]

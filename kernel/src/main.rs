@@ -18,13 +18,17 @@ mod entry;
 mod page;
 mod panic;
 mod process;
+mod tar;
 mod sbi;
 mod scheduler;
 mod spinlock;
+mod virtio;
 
 use crate::entry::kernel_entry;
 use crate::process::create_process;
+use crate::tar::fs_init;
 use crate::scheduler::yield_now;
+use crate::virtio::{virtio_blk_init, SECTOR_SIZE, read_write_disk};
 
 // Safety: Symbols created by linker script
 unsafe extern "C" {
@@ -76,6 +80,19 @@ fn kernel_main() -> ! {
     }
 
     write_csr!("stvec", kernel_entry as usize);
+
+    virtio_blk_init();
+    fs_init();
+
+    // let mut buf: [u8; SECTOR_SIZE] = [0u8; SECTOR_SIZE];
+    // read_write_disk(&mut buf, 0, false /* read from the disk */);
+    // print!("first sector:");
+    // for &b in &buf {
+    //     let _ = crate::sbi::put_byte(b);
+    // }
+    // let s = "hello from kernel!!!";
+    // buf[..s.len()].copy_from_slice(s.as_bytes());
+    // read_write_disk(&mut buf, 0, true /* write to the disk */);
 
     common::println!("Hello World! 🦀");
 

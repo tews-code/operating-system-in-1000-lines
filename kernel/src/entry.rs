@@ -1,17 +1,21 @@
 //! Kernel entry
 
+use alloc::slice;
 use core::arch::naked_asm;
 
 use common::{
     SYS_PUTBYTE,
     SYS_GETCHAR,
-    SYS_EXIT
+    SYS_EXIT,
+    SYS_READFILE,
+    SYS_WRITEFILE,
 };
 
 use crate::process::{PROCS, State};
 use crate::sbi::{put_byte, get_char};
 use crate::scheduler::{yield_now, CURRENT_PROC};
-use crate::{read_csr, write_csr};
+use crate::tar::{FILES, fs_flush};
+use crate::{println, read_csr, write_csr};
 
 const SCAUSE_ECALL: usize = 8;
 
@@ -178,7 +182,57 @@ fn handle_syscall(f: &mut TrapFrame) {
                 }
             yield_now();
             unreachable!("unreachable after SYS_EXIT");
-        }
+        },
+        SYS_READFILE | SYS_WRITEFILE => 'block: {
+            let filename_ptr = f.a0 as *const u8;
+            let filename_len = f.a1;
+
+            // Safety: Caller guarantees that filename_ptr points to valid memory
+            // of length filename_len that remains valid for the lifetime of this reference
+            let filename = unsafe {
+                str::from_utf8(slice::from_raw_parts(filename_ptr, filename_len))
+            }.expect("filename must be valid UTF-8");
+
+            let buf_ptr = f.a2 as *mut u8;
+            let buf_len = f.a3;
+
+            // Safety: Caller guarantees that buf_ptr points to valid memory
+            // of length buf_len that remains valid for the lifetime of this reference
+            let buf = unsafe {
+                slice::from_raw_parts_mut(buf_ptr, buf_len)
+            };
+
+            // println!("handling syscall SYS_READFILE | SYS_WRITEFILE for file {:?}", filename);
+
+            let Some(file_i) = FILES.fs_lookup(filename) else {
+                println!("file not found {:x?}", filename);
+                f.a0 = usize::MAX; // 2's complement is -1
+                break 'block;
+            };
+
+            match sysno {
+                SYS_WRITEFILE => {
+                    let mut files = FILES.0.lock();
+                    // try_borrow_mut()
+                    // .expect("should be able to borrow FILES mutably to handle SYS_WRITEFILE");
+
+                    files[file_i].data[..buf.len()].copy_from_slice(buf);
+                    files[file_i].size = buf.len();
+                    drop(files);
+                    fs_flush();
+                },
+                SYS_READFILE => {
+                    let files = FILES.0.lock();
+                    // try_borrow()
+                    // .expect("should be able to borrow FILES to handle SYS_READFILE");
+
+                    buf.copy_from_slice(&files[file_i].data[..buf.len()]);
+                },
+                _ => unreachable!("sysno must be SYS_READFILE or SYS_WRITEFILE"),
+            }
+
+            f.a0 = buf_len;
+        },
         _ => {panic!("unexpected syscall sysno={:x}", sysno);},
     }
 }

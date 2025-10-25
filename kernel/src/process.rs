@@ -10,6 +10,7 @@ use crate::address::{align_up, PAddr, VAddr};
 use crate::allocator::PAGE_SIZE;
 use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X, PAGE_U};
 use crate::spinlock::SpinLock;
+use crate::virtio::VIRTIO_BLK_PADDR;
 
 unsafe extern "C" {
     static __kernel_base: u8;
@@ -61,20 +62,20 @@ impl Procs {
 }
 
 // Optional - but vital for debugging if you want to print the contents of PROCS.
-impl fmt::Display for Procs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let procs = PROCS.0.lock();
-        for (i, process) in procs.iter().enumerate() {
-            write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
-            writeln!(f, "PROC[{i}]")?;
-            write!(f, "PID: {} ", process.pid)?;
-            write!(f, "SP: {:x?} ", process.sp)?;
-            writeln!(f, "STATE: {:?} ", process.state)?;
-            writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
-        }
-        Ok(())
-    }
-}
+// impl fmt::Display for Procs {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let procs = PROCS.0.lock();
+//         for (i, process) in procs.iter().enumerate() {
+//             write!(f, "Addr: {:x?} ", &raw const *process as usize)?;
+//             writeln!(f, "PROC[{i}]")?;
+//             write!(f, "PID: {} ", process.pid)?;
+//             write!(f, "SP: {:x?} ", process.sp)?;
+//             writeln!(f, "STATE: {:?} ", process.state)?;
+//             writeln!(f, "STACK: [ ... {:x?}]", &process.stack[8140..8191])?
+//         }
+//         Ok(())
+//     }
+// }
 
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
@@ -82,6 +83,7 @@ pub static PROCS: Procs = Procs::new();  // All process control structures.
 // starting address defined in `user.ld`.
 const USER_BASE: usize = 0x1000000;
 const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
+const SSTATUS_SUM: usize = 1 << 18;
 
 fn user_entry() {
     unsafe{asm!(
@@ -89,7 +91,7 @@ fn user_entry() {
         "csrw sstatus, {sstatus}",
         "sret",
         sepc = in(reg) USER_BASE,
-        sstatus = in(reg) SSTATUS_SPIE,
+        sstatus = in(reg) (SSTATUS_SPIE | SSTATUS_SUM),
     )}
 }
 
@@ -137,6 +139,8 @@ pub fn create_process(image: *const u8, image_size: usize) -> usize {
     for paddr in (kernel_base..free_ram_end).step_by(PAGE_SIZE) {
         map_page(page_table.as_mut(), VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
     }
+
+    map_page(page_table.as_mut(), VAddr::new(VIRTIO_BLK_PADDR as usize), PAddr::new(VIRTIO_BLK_PADDR as usize), PAGE_R | PAGE_W);
 
     process.page_table = Some(page_table);
 
