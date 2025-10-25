@@ -66,102 +66,188 @@ We use this file structure as the data structure for our file system. Comparing 
 
 ## Reading the file system
 
-First, define the data structures related to tar file system in `kernel.h`:
+First, define the data structures related to tar file system in `tar.rs`:
 
-```c [kernel.h]
-#define FILES_MAX      2
-#define DISK_MAX_SIZE  align_up(sizeof(struct file) * FILES_MAX, SECTOR_SIZE)
+```rust [kernel/src/tar.rs]
+pub const FILES_MAX: usize = 2;
+const DISK_MAX_SIZE: usize = align_up(size_of::<File>() * FILES_MAX, SECTOR_SIZE);
 
-struct tar_header {
-    char name[100];
-    char mode[8];
-    char uid[8];
-    char gid[8];
-    char size[12];
-    char mtime[12];
-    char checksum[8];
-    char type;
-    char linkname[100];
-    char magic[6];
-    char version[2];
-    char uname[32];
-    char gname[32];
-    char devmajor[8];
-    char devminor[8];
-    char prefix[155];
-    char padding[12];
-    char data[];      // Array pointing to the data area following the header
-                      // (flexible array member)
-} __attribute__((packed));
+#[repr(C, packed)]
+#[derive(Debug, Copy, Clone)]
+struct TarHeader {
+    name: [u8; 100],
+    mode: [u8; 8],
+    uid: [u8; 8],
+    gid: [u8; 8],
+    size: [u8; 12],
+    mtime: [u8; 12],
+    checksum: [u8; 8],
+    typeflag: u8,
+    linkname: [u8; 100],
+    magic: [u8; 6],
+    version: [u8; 2],
+    uname: [u8; 32],
+    gname: [u8; 32],
+    devmajor: [u8; 8],
+    devminor: [u8; 8],
+    prefix: [u8; 155],
+    _padding: [u8; 12],
+    // data follows as a byte array size `size`
+}
 
-struct file {
-    bool in_use;      // Indicates if this file entry is in use
-    char name[100];   // File name
-    char data[1024];  // File content
-    size_t size;      // File size
-};
+impl TarHeader {
+    fn size(&self) -> usize {
+        size_of::<Self>()
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct File {
+    in_use: bool,
+    pub name: [u8; 100],
+    pub data: [u8; 1024],
+    pub size: usize,
+}
+
+impl File {
+    const fn zeroed() -> Self {
+        // SAFETY: VirtioVirtq contains only structs/arrays of integers and pointers.
+        // All-zero bytes is a valid representation: integers become 0, pointer becomes null.
+        unsafe { core::mem::MaybeUninit::zeroed().assume_init() }
+    }
+}
 ```
-
 In our file system implementation, all files are read from the disk into memory at boot. `FILES_MAX` defines the maximum number of files that can be loaded, and `DISK_MAX_SIZE` specifies the maximum size of the disk image.
 
-Next, let's read the whole disk into memory in `kernel.c`:
+Next, let's read the whole disk into memory in `tar`:
 
-```c [kernel.c]
-struct file files[FILES_MAX];
-uint8_t disk[DISK_MAX_SIZE];
+```rust [kernel/src/tar.rs]
+#[derive(Debug)]
+pub struct Files(pub SpinLock<[File; FILES_MAX]>);
 
-int oct2int(char *oct, int len) {
-    int dec = 0;
-    for (int i = 0; i < len; i++) {
-        if (oct[i] < '0' || oct[i] > '7')
-            break;
+//Safety: Single threaded OS
+unsafe impl Sync for Files {}
 
-        dec = dec * 8 + (oct[i] - '0');
+pub static FILES: Files = Files(SpinLock::new([File::zeroed(); FILES_MAX]));
+
+#[derive(Debug)]
+pub struct Disk(SpinLock<[u8; DISK_MAX_SIZE]>);
+
+//Safety: Single threaded OS
+unsafe impl Sync for Disk {}
+
+impl Disk {
+    const fn empty() -> Self {
+        Self(SpinLock::new([0u8; DISK_MAX_SIZE]))
     }
-    return dec;
 }
 
-void fs_init(void) {
-    for (unsigned sector = 0; sector < sizeof(disk) / SECTOR_SIZE; sector++)
-        read_write_disk(&disk[sector * SECTOR_SIZE], sector, false);
+pub static DISK: Disk = Disk::empty();
 
-    unsigned off = 0;
-    for (int i = 0; i < FILES_MAX; i++) {
-        struct tar_header *header = (struct tar_header *) &disk[off];
-        if (header->name[0] == '\0')
+fn oct2int(oct: &[u8]) -> Result<usize, ()> {
+    oct.iter()
+    .take_while(|&&b | b != 0)  // Nul terminated octal slice so stop here
+    .try_fold(0, | dec, &b | {
+        match b {
+            b'0'..=b'7' => Ok(dec * 8 + (b - b'0') as usize),
+              _ => Err(())
+        }
+    })
+}
+
+
+// Turn the file size into a nul terminated octal string.
+fn int2oct(dec: usize, oct: &mut [u8]) {
+    let mut num = dec;
+    oct.fill(b' ');  // Fill with spaces
+    if let Some(last_byte) = oct.last_mut() {
+        *last_byte = b'\0'; // Set last byte to nul terminator
+    }
+    oct.iter_mut()
+    .rev()
+    .skip(1) // Skip the last byte to leave as nul terminator
+    .for_each(|byte| {
+        *byte = (num % 8) as u8 + b'0';
+    num /= 8;
+    });
+}
+
+pub fn fs_init() {
+    // Load into DISK by sector
+    for sector in 0..(size_of::<[u8; DISK_MAX_SIZE]>() / SECTOR_SIZE) {
+        let mut disk = DISK.0.lock();
+        let offset = sector * SECTOR_SIZE;
+        read_write_disk(&mut disk[offset..offset + SECTOR_SIZE], sector as u64, false);
+    }
+
+    // Load into FILES from DISK
+    let mut off = 0;
+    let mut files = FILES.0.lock();
+    for file in files.iter_mut() {
+        let disk = DISK.0.lock();
+
+        assert!(disk.len() >= off + size_of::<TarHeader>());
+        // Safety:
+        // * data is aligned to single byte alignment - not using larger types
+        // * disk is initialised and valid for reading
+        let header = unsafe {
+            &*(disk.as_ptr().add(off) as *const TarHeader)
+        };
+
+        if header.name[0] == b'\0' { // name is a c string with nul terminator
             break;
+        }
 
-        if (strcmp(header->magic, "ustar") != 0)
-            PANIC("invalid tar header: magic=\"%s\"", header->magic);
+        match core::ffi::CStr::from_bytes_with_nul(&header.magic) {
+            Ok(magic) if magic == c"ustar" => {},
+            Ok(magic) => panic!("invalid tar header: magic={:?}", magic),
+            Err(_) => panic!("invalid tar header: magic is not a valid c string"),
+        }
 
-        int filesz = oct2int(header->size, sizeof(header->size));
-        struct file *file = &files[i];
-        file->in_use = true;
-        strcpy(file->name, header->name);
-        memcpy(file->data, header->data, filesz);
-        file->size = filesz;
-        printf("file: %s, size=%d\n", file->name, file->size);
+        let filesz = oct2int(&header.size)
+        .expect("file size should be valid");
 
-        off += align_up(sizeof(struct tar_header) + filesz, SECTOR_SIZE);
+        file.in_use = true;
+        file.name = header.name;
+        file.size = filesz;
+
+        let data_offset = off + header.size();
+
+        file.data[..filesz].copy_from_slice(&disk[data_offset..data_offset + filesz]);
+
+        let file_name_str = str::from_utf8(&file.name)
+        .expect("file name text should be valid UTF8")
+        .trim();
+        crate::println!("file: {}, size={}", file_name_str, filesz);
+
+        off += align_up(
+            header.size() + filesz,
+                        SECTOR_SIZE
+        );
     }
 }
 ```
-
 In this function, we first use the `read_write_disk` function to load the disk image into a temporary buffer (`disk` variable). The `disk` variable is declared as a static variable instead of a local (stack) variable. This is because the stack has limited size, and it's preferable to avoid using it for large data areas.
 
 After loading the disk contents, we sequentially copy them into the `files` variable entries. Note that **the numbers in the tar header are in octal format**. It's very confusing because it looks like decimals. The `oct2int` function is used to convert these octal string values to integers.
 
 Lastly, make sure to call the `fs_init` function after initializing the virtio-blk device (`virtio_blk_init`) in `kernel_main`:
 
-```c [kernel.c] {5}
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
+```rust [kernel/src/main.rs]
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    write_csr!("stvec", kernel_entry as usize);
+
     virtio_blk_init();
     fs_init();
 
-    /* omitted */
-}
+    /* Omitted */
 ```
 
 ## Test file reads
@@ -169,11 +255,14 @@ void kernel_main(void) {
 Let's try! It should print the file names and their sizes in `disk` directory:
 
 ```
-$ ./run.sh
+$ ./os1k.sh run
 
-virtio-blk: capacity is 2560 bytes
-file: world.txt, size=0
-file: hello.txt, size=22
+virtio-blk: capacity is 10240 bytes
+file: hello.txt, size=84
+file: meow.txt, size=6
+Hello World! 🦀
+> 
+
 ```
 
 ## Writing to the disk
