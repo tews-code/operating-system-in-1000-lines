@@ -230,7 +230,7 @@ fn virtio_reg_fetch_and_or32(offset: u32, value: u32) {
 ```
 > [!WARNING]
 >
-> Accessing MMIO registers are not same as accessing normal memory. You should use `ptr::read_volatile` or `ptr::write_volatite` to prevent the compiler from optimizing out the read/write operations. In MMIO, memory access may trigger side effects (e.g., sending a command to the device).
+> Accessing MMIO registers are not same as accessing normal memory. You should use `ptr::read_volatile` or `ptr::write_volatile` to prevent the compiler from optimizing out the read/write operations. In MMIO, memory access may trigger side effects (e.g., sending a command to the device).
 
 ## Map the MMIO region
 
@@ -310,7 +310,7 @@ pub fn virtio_blk_init() {
 
 We also need to initialise this in our main procedure in `main`.
 
-```rust [kernel/src/main.rs] {10}
+```rust [kernel/src/main.rs] {11}
 fn kernel_main() -> ! {
     let bss = &raw const __bss;
     let bss_end = &raw const __bss_end;
@@ -340,25 +340,26 @@ Virtqueues also need to be initialized. Let's read the specification:
 
 Here's a simple implementation:
 
-```c [kernel.c]
-struct virtio_virtq *virtq_init(unsigned index) {
+```rust [kernel/src/virtio.rs]
+fn virtq_init(index: usize) ->  Box<VirtioVirtq> {
     // Allocate a region for the virtqueue.
-    paddr_t virtq_paddr = alloc_pages(align_up(sizeof(struct virtio_virtq), PAGE_SIZE) / PAGE_SIZE);
-    struct virtio_virtq *vq = (struct virtio_virtq *) virtq_paddr;
-    vq->queue_index = index;
-    vq->used_index = (volatile uint16_t *) &vq->used.index;
+    let mut vq = Box::new(VirtioVirtq::zeroed());
+
+    vq.queue_index = index as u16;
+    vq.used_index = &raw mut vq.used.0.index; // Create pointer for read_volatile
+
     // 1. Select the queue writing its index (first queue is 0) to QueueSel.
-    virtio_reg_write32(VIRTIO_REG_QUEUE_SEL, index);
+    virtio_reg_write32(VIRTIO_REG_QUEUE_SEL, index as u32);
     // 5. Notify the device about the queue size by writing the size to QueueNum.
-    virtio_reg_write32(VIRTIO_REG_QUEUE_NUM, VIRTQ_ENTRY_NUM);
+    virtio_reg_write32(VIRTIO_REG_QUEUE_NUM, VIRTQ_ENTRY_NUM as u32);
     // 6. Notify the device about the used alignment by writing its value in bytes to QueueAlign.
     virtio_reg_write32(VIRTIO_REG_QUEUE_ALIGN, 0);
     // 7. Write the physical number of the first page of the queue to the QueuePFN register.
-    virtio_reg_write32(VIRTIO_REG_QUEUE_PFN, virtq_paddr);
-    return vq;
+    virtio_reg_write32(VIRTIO_REG_QUEUE_PFN, &*vq as * const _ as u32); // In our OS the virtual address matches the physical address
+
+    vq
 }
 ```
-
 This function allocates a memory region for a virtqueue, and tells the its physical address to the device. The device will use this memory region to read/write requests.
 
 > [!TIP]
@@ -369,72 +370,102 @@ This function allocates a memory region for a virtqueue, and tells the its physi
 
 We now have an initialized virtio-blk device. Let's send an I/O request to the disk. I/O requests to the disk is implemented by _"adding processing requests to the virtqueue"_ as follows:
 
-```c [kernel.c]
-// Notifies the device that there is a new request. `desc_index` is the index
-// of the head descriptor of the new request.
-void virtq_kick(struct virtio_virtq *vq, int desc_index) {
-    vq->avail.ring[vq->avail.index % VIRTQ_ENTRY_NUM] = desc_index;
-    vq->avail.index++;
-    __sync_synchronize();
-    virtio_reg_write32(VIRTIO_REG_QUEUE_NOTIFY, vq->queue_index);
-    vq->last_used_index++;
+```rust [kernel/src/virtio.rs]
+// Notifies the device that there is a new request. `desc_index` is the index of the head descriptor of the new request
+fn virtq_kick(vq: &mut VirtioVirtq, desc_index: u16) {
+    let index = vq.avail.index as usize % VIRTQ_ENTRY_NUM;
+    vq.avail.ring[index] = desc_index;
+    vq.avail.index += 1;
+
+    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst); // Equivalent to __sync_synchronise();
+
+    virtio_reg_write32(VIRTIO_REG_QUEUE_NOTIFY, vq.queue_index.into());  // converting `u16` to `u32` cannot fail
+    vq.last_used_index += 1;
 }
 
 // Returns whether there are requests being processed by the device.
-bool virtq_is_busy(struct virtio_virtq *vq) {
-    return vq->last_used_index != *vq->used_index;
+fn virtq_is_busy(vq: &VirtioVirtq) -> bool {
+    // Safety:
+    // * vq.used_index is valid for reads
+    // * vq.used_index is 16-bit aligned
+    // * vq.used_index points to a value properly initialised by QEMU
+    // * `u16` is Copy
+    assert_eq!(vq.used_index as usize % align_of::<u16>(), 0);
+    unsafe {
+        vq.last_used_index != core::ptr::read_volatile(vq.used_index)
+    }
 }
 
 // Reads/writes from/to virtio-blk device.
-void read_write_disk(void *buf, unsigned sector, int is_write) {
-    if (sector >= blk_capacity / SECTOR_SIZE) {
-        printf("virtio: tried to read/write sector=%d, but capacity is %d\n",
-              sector, blk_capacity / SECTOR_SIZE);
+pub fn read_write_disk(buf: &mut [u8], sector: u64, is_write: bool) {
+    let blk_capacity = BLK_CAPACITY.lock()
+        .expect("block capacity initialised before read_write_disk call.");
+    if sector >= (blk_capacity / SECTOR_SIZE as u64) {
+        println!("virtio: tried to read/write sector={}, but capacity is {}", sector, blk_capacity / SECTOR_SIZE as u64);
         return;
     }
 
-    // Construct the request according to the virtio-blk specification.
-    blk_req->sector = sector;
-    blk_req->type = is_write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
-    if (is_write)
-        memcpy(blk_req->data, buf, SECTOR_SIZE);
+    let mut br_guard = BLK_REQ.lock();
+    let br = br_guard.as_mut()
+        .expect("BLK_REQ not initialised");
+
+    br.sector = sector;
+    br.req_type = if is_write { VIRTIO_BLK_T_OUT } else { VIRTIO_BLK_T_IN };
+
+    if is_write {
+        br.data.copy_from_slice(buf);
+    };
 
     // Construct the virtqueue descriptors (using 3 descriptors).
-    struct virtio_virtq *vq = blk_request_vq;
-    vq->descs[0].addr = blk_req_paddr;
-    vq->descs[0].len = sizeof(uint32_t) * 2 + sizeof(uint64_t);
-    vq->descs[0].flags = VIRTQ_DESC_F_NEXT;
-    vq->descs[0].next = 1;
+    let mut vq_guard = BLK_REQUEST_VQ.lock();
+    let vq = vq_guard.as_mut().expect("BLK_REQUEST_VQ not initialised");
 
-    vq->descs[1].addr = blk_req_paddr + offsetof(struct virtio_blk_req, data);
-    vq->descs[1].len = SECTOR_SIZE;
-    vq->descs[1].flags = VIRTQ_DESC_F_NEXT | (is_write ? 0 : VIRTQ_DESC_F_WRITE);
-    vq->descs[1].next = 2;
+    let blk_req_paddr = &**br as *const VirtioBlkReq as usize; // Double deference to get address from heap, not of the Box
 
-    vq->descs[2].addr = blk_req_paddr + offsetof(struct virtio_blk_req, status);
-    vq->descs[2].len = sizeof(uint8_t);
-    vq->descs[2].flags = VIRTQ_DESC_F_WRITE;
+    // Descriptor 0: request header
+    vq.descs[0] = VirtqDesc {
+        addr: blk_req_paddr as u64,
+        len: (mem::size_of::<u32>() * 2 + mem::size_of::<u64>()) as u32,
+        flags: VIRTQ_DESC_F_NEXT as u16,
+        next: 1,
+    };
+
+    // Descriptor 1: data buffer
+    vq.descs[1] = VirtqDesc {
+        addr: (blk_req_paddr + offset_of!(VirtioBlkReq, data)) as u64,
+        len: SECTOR_SIZE as u32,
+        flags: (VIRTQ_DESC_F_NEXT | (if is_write {0} else {VIRTQ_DESC_F_WRITE})) as u16,
+        next: 2,
+    };
+
+    // Descriptor 2: status byte
+    vq.descs[2] = VirtqDesc {
+        addr: (blk_req_paddr + offset_of!(VirtioBlkReq, status)) as u64,
+        len: mem::size_of::<u8>() as u32,
+        flags: VIRTQ_DESC_F_WRITE as u16,
+        next: 0,
+    };
 
     // Notify the device that there is a new request.
-    virtq_kick(vq, 0);
+    virtq_kick(vq.as_mut(), 0);
 
     // Wait until the device finishes processing.
-    while (virtq_is_busy(vq))
-        ;
+    while virtq_is_busy(vq.as_ref()) {
+        core::hint::spin_loop();
+    }
 
     // virtio-blk: If a non-zero value is returned, it's an error.
-    if (blk_req->status != 0) {
-        printf("virtio: warn: failed to read/write sector=%d status=%d\n",
-               sector, blk_req->status);
+    if br.status != 0 {
+        println!("virtio: warn: failed to read/write sector={} status={}", sector, br.status);
         return;
     }
 
     // For read operations, copy the data into the buffer.
-    if (!is_write)
-        memcpy(buf, blk_req->data, SECTOR_SIZE);
+    if !is_write {
+        buf.copy_from_slice(&br.data);
+    }
 }
 ```
-
 A request is sent in the following steps:
 
 1. Construct a request in `blk_req`. Specify the sector number you want to access and the type of read/write.
@@ -446,38 +477,38 @@ A request is sent in the following steps:
 
 Here, we construct a descriptor chain consisting of 3 descriptors. We need 3 descriptors because each descriptor has different attributes (`flags`) as follows:
 
-```c
-struct virtio_blk_req {
+```rust
+struct VirtioBlkReq {
     // First descriptor: read-only from the device
-    uint32_t type;
-    uint32_t reserved;
-    uint64_t sector;
+    req_type: u32,
+    reserved: u32,
+    sector: u64,
 
-    // Second descriptor: writable by the device if it's a read operation (VIRTQ_DESC_F_WRITE)
-    uint8_t data[512];
+     // Second descriptor: writable by the device if it's a read operation 
+    data: [u8; 512],
 
     // Third descriptor: writable by the device (VIRTQ_DESC_F_WRITE)
-    uint8_t status;
-} __attribute__((packed));
+    status: u8,
+}
 ```
-
 Because we busy-wait until the processing is complete every time, we can simply use the *first* 3 descriptors in the ring. However, in practice, you need to track free/used descriptors to process multiple requests simultaneously.
 
 ## Try it out
 
-Lastly, let's try disk I/O. Add the following code to `kernel.c`:
+Lastly, let's try disk I/O. Add the following code to `main.rs`:
 
-```c [kernel.c] {3-8}
+```rust [kernel/src/main.rs] {3-10}
     virtio_blk_init();
 
-    char buf[SECTOR_SIZE];
-    read_write_disk(buf, 0, false /* read from the disk */);
-    printf("first sector: %s\n", buf);
-
-    strcpy(buf, "hello from kernel!!!\n");
-    read_write_disk(buf, 0, true /* write to the disk */);
+    let mut buf: [u8; SECTOR_SIZE] = [0u8; SECTOR_SIZE];
+    read_write_disk(&mut buf, 0, false /* read from the disk */);
+    for &b in &buf {
+        let _ = crate::sbi::put_byte(b);
+    }
+    let s = "hello from kernel!!!";
+    buf[..s.len()].copy_from_slice(s.as_bytes());
+    read_write_disk(&mut buf, 0, true /* write to the disk */);
 ```
-
 Since we specify `lorem.txt` as the (raw) disk image, its contents should be displayed as-is:
 
 ```
@@ -491,8 +522,7 @@ Also, the first sector is overwritten with the string "hello from kernel!!!":
 
 ```
 $ head lorem.txt
-hello from kernel!!!
-amet, consectetur adipiscing elit ...
+hello from kernel!!!t amet, consectetur adipiscing elit. In ...
 ```
 
 Congratulations! You've successfully implemented a disk I/O driver!
