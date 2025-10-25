@@ -269,51 +269,58 @@ Hello World! 🦀
 
 Writing files can be implemented by writing the contents of the `files` variable back to the disk in tar file format:
 
-```c [kernel.c]
-void fs_flush(void) {
+```rust [kernel/src/tar.rs]
+pub fn fs_flush() {
     // Copy all file contents into `disk` buffer.
-    memset(disk, 0, sizeof(disk));
-    unsigned off = 0;
-    for (int file_i = 0; file_i < FILES_MAX; file_i++) {
-        struct file *file = &files[file_i];
-        if (!file->in_use)
-            continue;
+    let mut disk = DISK.0.lock();
+    disk.fill(0);
 
-        struct tar_header *header = (struct tar_header *) &disk[off];
-        memset(header, 0, sizeof(*header));
-        strcpy(header->name, file->name);
-        strcpy(header->mode, "000644");
-        strcpy(header->magic, "ustar");
-        strcpy(header->version, "00");
-        header->type = '0';
-
-        // Turn the file size into an octal string.
-        int filesz = file->size;
-        for (int i = sizeof(header->size); i > 0; i--) {
-            header->size[i - 1] = (filesz % 8) + '0';
-            filesz /= 8;
+    let files = FILES.0.lock();
+    let mut off = 0;
+    for file in files.iter() {
+        if !file.in_use {
+            break;
         }
 
-        // Calculate the checksum.
-        int checksum = ' ' * sizeof(header->checksum);
-        for (unsigned i = 0; i < sizeof(struct tar_header); i++)
-            checksum += (unsigned char) disk[off + i];
+        // Create header
+        let mut header = TarHeader::zeroed();
+        header.name.copy_from_slice(&file.name);
+        header.mode.copy_from_slice("00000644".as_bytes()); // Read and write permissions
+        header.magic.copy_from_slice("ustar\0".as_bytes());
+        header.version.copy_from_slice("00".as_bytes());
+        header.typeflag = b'0'; // Regular file
+        int2oct(file.size, &mut header.size);
+        header.checksum.fill(b' '); // Checksum is calculated with checksum field set to spaces
 
-        for (int i = 5; i >= 0; i--) {
-            header->checksum[i] = (checksum % 8) + '0';
-            checksum /= 8;
-        }
+        // Calculate the checksum
+        let checksum = {
+            // Safety: We drop buf on checksum creation to avoid mutating underlying data
+            let buf = unsafe { header.as_bytes() };
+            buf.iter().fold(0, | checksum, byte | checksum + *byte as usize )
+        };
+        int2oct(checksum, &mut header.checksum);
 
-        // Copy file data.
-        memcpy(header->data, file->data, file->size);
-        off += align_up(sizeof(struct tar_header) + file->size, SECTOR_SIZE);
+        // Safety: We do not mutate header in the remainder of this loop
+        let buf = unsafe { header.as_bytes() };
+        disk[off..off + header.size()].copy_from_slice(buf);
+
+        // Copy file data immediately after the header.
+        let data_offset = off + header.size();
+        let data_size = size_of_val(&file.data);
+        disk[data_offset..data_offset + data_size].copy_from_slice(&file.data);
+
+        off += align_up(header.size() + file.size, SECTOR_SIZE);
     }
 
-    // Write `disk` buffer into the virtio-blk.
-    for (unsigned sector = 0; sector < sizeof(disk) / SECTOR_SIZE; sector++)
-        read_write_disk(&disk[sector * SECTOR_SIZE], sector, true);
+    // println!("tar: fs_flush just before write DISK is {:?}", disk);
 
-    printf("wrote %d bytes to disk\n", sizeof(disk));
+    // Write `disk` buffer into the vitio-blk.
+    for sector in 0..(DISK_MAX_SIZE / SECTOR_SIZE) {
+        let offset = sector * SECTOR_SIZE;
+        read_write_disk(&mut disk[offset..offset + SECTOR_SIZE], sector as u64, true);
+    }
+
+    println!("wrote {} bytes to disk", DISK_MAX_SIZE);
 }
 ```
 
@@ -323,24 +330,19 @@ In this function, a tar file is built in the `disk` variable, then written to th
 
 Now that we have implemented file system read and write operations, let's make it possible for applications to read and write files. We'll provide two system calls: `readfile` for reading files and `writefile` for writing files. Both take as arguments the filename, a memory buffer for reading or writing, and the size of the buffer.
 
-```c [common.h]
-#define SYS_READFILE  4
-#define SYS_WRITEFILE 5
+```rust [common/src/lib.rs]
+pub const SYS_READFILE: usize = 4;
+pub const SYS_WRITEFILE: usize = 5;
 ```
 
-```c [user.c]
-int readfile(const char *filename, char *buf, int len) {
-    return syscall(SYS_READFILE, (int) filename, (int) buf, len);
+```rust [user/src/lib.rs]
+pub fn readfile(filename: &str, buf: &mut [u8]) {
+    let _ = sys_call(SYS_READFILE, filename.as_ptr() as isize, filename.len() as isize, buf.as_mut_ptr() as isize, buf.len() as isize);
 }
 
-int writefile(const char *filename, const char *buf, int len) {
-    return syscall(SYS_WRITEFILE, (int) filename, (int) buf, len);
+pub fn writefile(filename: &str, buf: &[u8]) {
+    let _ = sys_call(SYS_WRITEFILE, filename.as_ptr() as isize, filename.len() as isize,  buf.as_ptr() as isize, buf.len() as isize);
 }
-```
-
-```c [user.h]
-int readfile(const char *filename, char *buf, int len);
-int writefile(const char *filename, const char *buf, int len);
 ```
 
 > [!TIP]
@@ -349,55 +351,87 @@ int writefile(const char *filename, const char *buf, int len);
 
 ## Implement system calls
 
-Let's implement the system calls we defined in the previous section.
+Let's implement the system calls we defined in the previous section. Let's add a file lookup method to our `struct Files`:
 
-```c [kernel.c] {1-9,14-39}
-struct file *fs_lookup(const char *filename) {
-    for (int i = 0; i < FILES_MAX; i++) {
-        struct file *file = &files[i];
-        if (!strcmp(file->name, filename))
-            return file;
-    }
+```rust [kernel/src/tar.rs]
 
-    return NULL;
-}
+impl Files {
+    pub fn fs_lookup(&self, name: &str) -> Option<usize> {
+        let files = self.0
+            .try_borrow()
+            .expect("should be able to borrow Files to get index from name");
 
-void handle_syscall(struct trap_frame *f) {
-    switch (f->a3) {
-        /* omitted */
-        case SYS_READFILE:
-        case SYS_WRITEFILE: {
-            const char *filename = (const char *) f->a0;
-            char *buf = (char *) f->a1;
-            int len = f->a2;
-            struct file *file = fs_lookup(filename);
-            if (!file) {
-                printf("file not found: %s\n", filename);
-                f->a0 = -1;
-                break;
-            }
+        println!("looking up filename {}", name);
 
-            if (len > (int) sizeof(file->data))
-                len = file->size;
-
-            if (f->a3 == SYS_WRITEFILE) {
-                memcpy(file->data, buf, len);
-                file->size = len;
-                fs_flush();
-            } else {
-                memcpy(buf, file->data, len);
-            }
-
-            f->a0 = len;
-            break;
-        }
-        default:
-            PANIC("unexpected syscall a3=%x\n", f->a3);
+        files.iter()
+            .position(|f| {  // `position` returns the index based on the closure result being true
+                CStr::from_bytes_until_nul(&f.name)
+                    .ok() // Converts Result<> into Option<>
+                    .and_then(|cstr| cstr.to_str().ok()) // Returns None if cstr is None, otherwise calls closure
+                    .is_some_and(|s| s == name) // Evaluates closure if receiving Some
+        })
     }
 }
 ```
 
-File read and write operations are mostly the same, so they are grouped together in the same place. The `fs_lookup` function searches for an entry in the `files` variable based on the filename. For reading, it reads data from the file entry, and for writing, it modifies the contents of the file entry. Lastly, the `fs_flush` function writes to the disk.
+Then add the handlers in `entry.rs`:
+
+```rust [kernel/src/entry.rs]
+fn handle_syscall(f: &mut TrapFrame) {
+    let sysno = f.a4;
+    match sysno {
+        /* Omitted */
+        SYS_READFILE | SYS_WRITEFILE => 'block: {
+            let filename_ptr = f.a0 as *const u8;
+            let filename_len = f.a1;
+
+            // Safety: Caller guarantees that filename_ptr points to valid memory
+            // of length filename_len that remains valid for the lifetime of this reference
+            let filename = unsafe {
+                str::from_utf8(slice::from_raw_parts(filename_ptr, filename_len))
+            }.expect("filename must be valid UTF-8");
+
+            let buf_ptr = f.a2 as *mut u8;
+            let buf_len = f.a3;
+
+            // Safety: Caller guarantees that buf_ptr points to valid memory
+            // of length buf_len that remains valid for the lifetime of this reference
+            let buf = unsafe {
+                slice::from_raw_parts_mut(buf_ptr, buf_len)
+            };
+
+            // println!("handling syscall SYS_READFILE | SYS_WRITEFILE for file {:?}", filename);
+
+            let Some(file_i) = FILES.fs_lookup(filename) else {
+                println!("file not found {:x?}", filename);
+                f.a0 = usize::MAX; // 2's complement is -1
+                break 'block;
+            };
+
+            match sysno {
+                SYS_WRITEFILE => {
+                    let mut files = FILES.0.try_borrow_mut()
+                        .expect("should be able to borrow FILES mutably to handle SYS_WRITEFILE");
+
+                    files[file_i].data[..buf.len()].copy_from_slice(buf);
+                    files[file_i].size = buf.len();
+                    drop(files);
+                    fs_flush();
+                },
+               SYS_READFILE => {
+                    let files = FILES.0.try_borrow()
+                        .expect("should be able to borrow FILES to handle SYS_READFILE");
+
+                    buf.copy_from_slice(&files[file_i].data[..buf.len()]);
+                },
+                 _ => unreachable!("sysno must be SYS_READFILE or SYS_WRITEFILE"),
+            }
+
+            f.a0 = buf_len;
+        },
+
+```
+File read and write operations are mostly the same, so they are grouped together in the same place. The `fs_lookup` method searches for an entry in the `FILES` variable based on the filename. For reading, it reads data from the file entry, and for writing, it modifies the contents of the file entry. Lastly, the `fs_flush` function writes to the disk.
 
 > [!WARNING]
 >
@@ -407,17 +441,22 @@ File read and write operations are mostly the same, so they are grouped together
 
 Let's read and write files from the shell. Since the shell doesn't implement command-line argument parsing, we'll implement `readfile` and `writefile` commands that read and write a hardcoded `hello.txt` file for now:
 
-```c [shell.c]
-        else if (strcmp(cmdline, "readfile") == 0) {
-            char buf[128];
-            int len = readfile("hello.txt", buf, sizeof(buf));
-            buf[len] = '\0';
-            printf("%s\n", buf);
-        }
-        else if (strcmp(cmdline, "writefile") == 0)
-            writefile("hello.txt", "Hello from shell!\n", 19);
+```rust [user/src/bin/shell.rs]
+            "readfile" => {
+                let mut buf = [0u8; 128];
+                readfile("hello.txt", &mut buf);
+                CStr::from_bytes_until_nul(&buf)
+                .ok()
+                .and_then(|cstr| cstr.to_str().ok())
+                .map(|s| println!("{}", s.trim_end()))
+                .unwrap_or_else(|| println!("could not read file contents"));
+            }
+            "writefile" => {
+                writefile(
+                    "meow.txt",
+                    b"Hello from the shell!");
+            },
 ```
-
 It's easy peasy! However, it causes a page fault:
 
 ```
