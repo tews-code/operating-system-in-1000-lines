@@ -502,6 +502,7 @@ Lastly, let's try disk I/O. Add the following code to `main.rs`:
 
     let mut buf: [u8; SECTOR_SIZE] = [0u8; SECTOR_SIZE];
     read_write_disk(&mut buf, 0, false /* read from the disk */);
+    print!("first sector:");
     for &b in &buf {
         let _ = crate::sbi::put_byte(b);
     }
