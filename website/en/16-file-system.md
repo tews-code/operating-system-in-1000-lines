@@ -460,48 +460,43 @@ Let's read and write files from the shell. Since the shell doesn't implement com
 It's easy peasy! However, it causes a page fault:
 
 ```
-$ ./run.sh
+$ ./os1k.sh run
 
 > readfile
-PANIC: kernel.c:561: unexpected trap scause=0000000d, stval=01000423, sepc=8020128a
+⚠️ Panic: panicked at kernel/src/entry.rs:151:13:
+unexpected trap scause=0xd, stval=0x1002005, sepc=0x80205888
 ```
 
-Let's dig into the cause. According the `llvm-objdump`, it happens in `strcmp` function:
+Let's dig into the cause. According the `llvm-objdump`, it happens in a core string conversion function:
 
 ```
 $ llvm-objdump -d kernel.elf
 ...
+802057fa <_ZN4core3str8converts9from_utf817h690e91dedad74810E>:
+...
+80205884: 00d58733      add     a4, a1, a3
+80205888: 00070703      lb      a4, 0x0(a4)
 
-80201282 <strcmp>:
-80201282: 03 46 05 00   lbu     a2, 0(a0)
-80201286: 15 c2         beqz    a2, 0x802012aa <.LBB3_4>
-80201288: 05 05         addi    a0, a0, 1
-
-8020128a <.LBB3_2>:
-8020128a: 83 c6 05 00   lbu     a3, 0(a1) ← page fault here (a1 has 2nd argument)
-8020128e: 33 37 d0 00   snez    a4, a3
-80201292: 93 77 f6 0f   andi    a5, a2, 255
-80201296: bd 8e         xor     a3, a3, a5
-80201298: 93 b6 16 00   seqz    a3, a3
 ```
 
-Upon checking the page table contents in QEMU monitor, the page at `0x1000423` (with `vaddr = 01000000`) is indeed mapped as a user page (`u`) with read, write, and execute (`rwx`) permissions:
+Upon checking the page table contents in QEMU monitor, the page at `0x1002005` (with `vaddr = 01002000`) is indeed mapped as a user page (`u`) with read, write, and execute (`rwx`) permissions:
 
 ```
 QEMU 8.0.2 monitor - type 'help' for more information
 (qemu) info mem
 vaddr    paddr            size     attr
 -------- ---------------- -------- -------
-01000000 000000008026c000 00001000 rwxu-a-
+01000000 000000008029c000 00002000 rwxu-a-
+01002000 000000008029e000 00010000 rwxu---
+
 ```
 
 Let's dump the memory at the virtual address (`x` command):
 
 ```
-(qemu) x /10c 0x1000423
-01000423: 'h' 'e' 'l' 'l' 'o' '.' 't' 'x' 't' '\x00' 'r' 'e' 'a' 'd' 'f' 'i'
-01000433: 'l' 'e' '\x00' 'h' 'e' 'l' 'l' 'o' '\x00' '%' 's' '\n' '\x00' 'e' 'x' 'i'
-01000443: 't' '\x00' 'w' 'r' 'i' 't' 'e' 'f'
+(qemu) x /10c 0x8029e000
+8029e000: 'h' 'e' 'l' 'l' '!' 'h' 'e' 'l' 'l' 'o' '.' 't' 'x' 't' 'H' 'e'
+8029e010: 'l' 'l' 'o' ' '
 ```
 
 If the page table settings are incorrect, the `x` command will display an error or contents in other pages. Here, we can see that the page table is correctly configured, and the pointer is indeed pointing to the string `"hello.txt"`.
@@ -517,24 +512,20 @@ In RISC-V, the behavior of S-Mode (kernel) can be configured through  `sstatus` 
 > This is a safety measure to prevent unintended references to user memory areas.
 > Incidentally, Intel CPUs also have the same feature named "SMAP (Supervisor Mode Access Prevention)".
 
-Define the position of the `SUM` bit as follows:
+All we need to do is to set the `SUM` bit when entering user space. Define the position of the `SUM` bit as follows:
 
-```c [kernel.h]
-#define SSTATUS_SUM  (1 << 18)
-```
+```rust [kernel/src/process.rs] {2, 10}
+const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
+const SSTATUS_SUM: usize = 1 << 18;
 
-All we need to do is to set the `SUM` bit when entering user space:
-
-```c [kernel.c] {8}
-__attribute__((naked)) void user_entry(void) {
-    __asm__ __volatile__(
-        "csrw sepc, %[sepc]\n"
-        "csrw sstatus, %[sstatus]\n"
-        "sret\n"
-        :
-        : [sepc] "r" (USER_BASE),
-          [sstatus] "r" (SSTATUS_SPIE | SSTATUS_SUM) // updated
-    );
+fn user_entry() {
+    unsafe{asm!(
+        "csrw sepc, {sepc}",
+        "csrw sstatus, {sstatus}",
+        "sret",
+        sepc = in(reg) USER_BASE,
+        sstatus = in(reg) (SSTATUS_SPIE | SSTATUS_SUM),
+    )}
 }
 ```
 
@@ -555,7 +546,7 @@ __attribute__((naked)) void user_entry(void) {
 Let's try reading and writing files again. `readfile` should display the contents of `hello.txt`:
 
 ```
-$ ./run.sh
+$ ./os1k.sh run
 
 > readfile
 Can you see me? Ah, there you are! You've unlocked the achievement "Virtio Newbie!"
