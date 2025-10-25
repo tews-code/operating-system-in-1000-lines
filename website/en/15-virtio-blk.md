@@ -120,95 +120,189 @@ const VIRTIO_BLK_T_OUT: u32 = 1;
 #define VIRTIO_BLK_T_IN  0
 #define VIRTIO_BLK_T_OUT 1
 
+pub const SECTOR_SIZE: usize =       512;
+const VIRTQ_ENTRY_NUM: usize =       16;
+const VIRTIO_DEVICE_BLK: u32 =       2;
+pub const VIRTIO_BLK_PADDR: u32 = 0x10001000;
+const VIRTIO_REG_MAGIC: u32 =         0x00;
+const VIRTIO_REG_VERSION: u32 =       0x04;
+const VIRTIO_REG_DEVICE_ID: u32 =     0x08;
+const VIRTIO_REG_QUEUE_SEL: u32 =     0x30;
+#[expect(dead_code)]
+const VIRTIO_REG_QUEUE_NUM_MAX: u32 = 0x34;
+const VIRTIO_REG_QUEUE_NUM: u32 =     0x38;
+const VIRTIO_REG_QUEUE_ALIGN: u32 =   0x3c;
+const VIRTIO_REG_QUEUE_PFN: u32 =     0x40;
+#[expect(dead_code)]
+const VIRTIO_REG_QUEUE_READY: u32 =   0x44;
+const VIRTIO_REG_QUEUE_NOTIFY: u32 =  0x50;
+const VIRTIO_REG_DEVICE_STATUS: u32 = 0x70;
+const VIRTIO_REG_DEVICE_CONFIG: u32 = 0x100;
+const VIRTIO_STATUS_ACK: u32 =       1;
+const VIRTIO_STATUS_DRIVER: u32 =    2;
+const VIRTIO_STATUS_DRIVER_OK: u32 = 4;
+const VIRTIO_STATUS_FEAT_OK: u32 =   8;
+const VIRTQ_DESC_F_NEXT: u32 =          1;
+const VIRTQ_DESC_F_WRITE: u32 =         2;
+#[expect(dead_code)]
+const VIRTQ_AVAIL_F_NO_INTERRUPT: u32 = 1;
+const VIRTIO_BLK_T_IN: u32 =  0;
+const VIRTIO_BLK_T_OUT: u32 = 1;
+
 // Virtqueue Descriptor area entry.
-struct virtq_desc {
-    uint64_t addr;
-    uint32_t len;
-    uint16_t flags;
-    uint16_t next;
-} __attribute__((packed));
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug)]
+struct VirtqDesc {
+    addr:u64,
+    len: u32,
+    flags: u16,
+    next: u16,
+}
 
 // Virtqueue Available Ring.
-struct virtq_avail {
-    uint16_t flags;
-    uint16_t index;
-    uint16_t ring[VIRTQ_ENTRY_NUM];
-} __attribute__((packed));
+#[repr(C, packed)]
+#[derive(Debug)]
+struct VirtqAvail {
+    flags: u16,
+    index: u16,
+    ring: [u16; VIRTQ_ENTRY_NUM],
+}
 
 // Virtqueue Used Ring entry.
-struct virtq_used_elem {
-    uint32_t id;
-    uint32_t len;
-} __attribute__((packed));
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug)]
+struct VirtqUsedElem {
+    id: u32,
+    len: u32,
+}
 
 // Virtqueue Used Ring.
-struct virtq_used {
-    uint16_t flags;
-    uint16_t index;
-    struct virtq_used_elem ring[VIRTQ_ENTRY_NUM];
-} __attribute__((packed));
+#[repr(C, packed)]
+#[derive(Debug)]
+struct VirtqUsed {
+    flags: u16,
+    index: u16,
+    ring: [VirtqUsedElem; VIRTQ_ENTRY_NUM],
+}
+
+// Page-aligned VirtqUsed
+#[repr(C, align(4096))]
+#[derive(Debug)]
+struct AlignedVirtqUsed(VirtqUsed);
 
 // Virtqueue.
-struct virtio_virtq {
-    struct virtq_desc descs[VIRTQ_ENTRY_NUM];
-    struct virtq_avail avail;
-    struct virtq_used used __attribute__((aligned(PAGE_SIZE)));
-    int queue_index;
-    volatile uint16_t *used_index;
-    uint16_t last_used_index;
-} __attribute__((packed));
+#[repr(C)]  // Not packed, as VirtqUsed is aligned to page size
+#[derive(Debug)]
+struct VirtioVirtq {
+    descs: [VirtqDesc; VIRTQ_ENTRY_NUM],
+    avail: VirtqAvail,
+    used: AlignedVirtqUsed,  // Needs align to page size
+    queue_index: u16,
+    used_index: *mut u16, // Only access using ptr::read_volatile
+    last_used_index: u16,
+}
+
+impl VirtioVirtq {
+    fn zeroed() -> Self {
+        // SAFETY: VirtioVirtq contains only structs/arrays of integers and pointers.
+        // All-zero bytes is a valid representation: integers become 0, pointer becomes null.
+        unsafe { core::mem::MaybeUninit::zeroed().assume_init() }
+    }
+}
+
+// Safety: Single threaded OS
+unsafe impl Sync for VirtioVirtq {}
+// SAFETY: VirtioVirtq contains a pointer to memory-mapped I/O registers.
+// This pointer is only accessed while holding the SpinLock, ensuring
+// no concurrent access occurs. The hardware is accessible from any CPU core.
+unsafe impl Send for VirtioVirtq {}
 
 // Virtio-blk request.
-struct virtio_blk_req {
-    uint32_t type;
-    uint32_t reserved;
-    uint64_t sector;
-    uint8_t data[512];
-    uint8_t status;
-} __attribute__((packed));
-```
+#[repr(C, packed)]
+#[derive(Debug)]
+struct VirtioBlkReq {
+    req_type: u32,
+    reserved: u32,
+    sector: u64,
+    data: [u8; 512],
+    status: u8,
+}
 
+//Safety: Single threaded OS
+unsafe impl Sync for VirtioBlkReq {}
+
+impl VirtioBlkReq {
+    fn zeroed() -> Self {
+        // SAFETY: VirtioBlkReq is a packed C struct with only integer/array fields.
+        // All-zero bytes is a valid representation for this type.
+        unsafe { core::mem::MaybeUninit::zeroed().assume_init() }
+    }
+}
+```
 > [!NOTE]
 >
-> `__attribute__((packed))` is a compiler extension that tells the compiler to pack the struct members without *padding*. Otherwise, the compiler may add hidden padding bytes and driver/device may see different values.
+> `#[repr(C, packed)]` is a compiler directive that tells the compiler to pack the struct members without *padding* and keep them in the same order as specified. Otherwise, the compiler may add hidden padding bytes and driver/device may see different values, or may swap the order of struct members.
 
-Next, add utility functions to `kernel.c` for accessing MMIO registers:
+Next, add utility functions to `virtio` for accessing MMIO registers:
 
-```c [kernel.c]
-uint32_t virtio_reg_read32(unsigned offset) {
-    return *((volatile uint32_t *) (VIRTIO_BLK_PADDR + offset));
+```rust [kernel/src/virtio.rs]
+fn virtio_reg_read32(offset: u32) -> u32 {
+    // Safety:
+    // * VIRTIO_BLK_PADDR + offset is valid for reads
+    // * VIRTIO_BLK_PADDR is 32-bit aligned and offset is 32-bit aligned
+    // * VIRTIO_BLK_PADDR + offset points to a QEMU initialized `u32`
+    // * `u32` is Copy
+    assert_eq!((VIRTIO_BLK_PADDR + offset) % align_of::<u32>() as u32, 0);
+    unsafe {
+        ptr::read_volatile((VIRTIO_BLK_PADDR + offset) as *const u32)
+    }
 }
 
-uint64_t virtio_reg_read64(unsigned offset) {
-    return *((volatile uint64_t *) (VIRTIO_BLK_PADDR + offset));
+fn virtio_reg_read64(offset: u32) -> u64 {
+    // Safety:
+    // * VIRTIO_BLK_PADDR + offset is valid for reads
+    // * VIRTIO_BLK_PADDR is 64-bit aligned and offset is 64-bit aligned
+    // * VIRTIO_BLK_PADDR + offset points to a QEMU initialized `u64`
+    // * `u64` is Copy
+    assert_eq!((VIRTIO_BLK_PADDR + offset) % align_of::<u64>() as u32, 0);
+    unsafe {
+        ptr::read_volatile((VIRTIO_BLK_PADDR + offset) as *const u64)
+    }
 }
 
-void virtio_reg_write32(unsigned offset, uint32_t value) {
-    *((volatile uint32_t *) (VIRTIO_BLK_PADDR + offset)) = value;
+fn virtio_reg_write32(offset: u32, value: u32) {
+    // Safety:
+    // * VIRTIO_BLK_PADDR + offset is valid for writes.
+    // * VIRTIO_BLK_PADDR + offset is properly 32-bit aligned.
+    assert_eq!((VIRTIO_BLK_PADDR + offset) % align_of::<u32>() as u32, 0);
+    unsafe {
+        ptr::write_volatile((VIRTIO_BLK_PADDR + offset) as *mut u32, value)
+    }
 }
 
-void virtio_reg_fetch_and_or32(unsigned offset, uint32_t value) {
+fn virtio_reg_fetch_and_or32(offset: u32, value: u32) {
+    // Safety:
+    // * Caller ensures VIRTIO_BLK_PADDR + offset is valid for reads and writes
     virtio_reg_write32(offset, virtio_reg_read32(offset) | value);
 }
 ```
-
 > [!WARNING]
 >
-> Accessing MMIO registers are not same as accessing normal memory. You should use `volatile` keyword to prevent the compiler from optimizing out the read/write operations. In MMIO, memory access may trigger side effects (e.g., sending a command to the device).
+> Accessing MMIO registers are not same as accessing normal memory. You should use `ptr::read_volatile` or `ptr::write_volatite` to prevent the compiler from optimizing out the read/write operations. In MMIO, memory access may trigger side effects (e.g., sending a command to the device).
 
 ## Map the MMIO region
 
-First, map the `virtio-blk` MMIO region to the page table so that the kernel can access the MMIO registers. It's super simple:
+First, map the `virtio-blk` MMIO region to the page table so that the kernel can access the MMIO registers. We do this in `process`. It's super simple:
 
-```c [kernel.c] {8}
-struct process *create_process(const void *image, size_t image_size) {
+```rust [kernel/src/process.rs] {9}
+pub fn create_process(image: *const u8, image_size: usize) -> usize {
     /* omitted */
 
-    for (paddr_t paddr = (paddr_t) __kernel_base;
-         paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE)
-        map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+    for paddr in (kernel_base..free_ram_end).step_by(PAGE_SIZE) {
+        map_page(page_table.as_mut(), VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
+    }
 
-    map_page(page_table, VIRTIO_BLK_PADDR, VIRTIO_BLK_PADDR, PAGE_R | PAGE_W); // new
+    map_page(page_table.as_mut(), VAddr::new(VIRTIO_BLK_PADDR as usize), PAddr::new(VIRTIO_BLK_PADDR as usize), PAGE_R | PAGE_W); // new
 ```
 
 ## Virtio device initialization
@@ -229,49 +323,63 @@ The initialization process is detailed in the [virtio specification](https://doc
 
 You might be overwhelmed by lengthy steps, but don't worry. A naive implementation is very simple:
 
-```c [kernel.c]
-struct virtio_virtq *blk_request_vq;
-struct virtio_blk_req *blk_req;
-paddr_t blk_req_paddr;
-uint64_t blk_capacity;
+```rust [kernel/src/virtio.rs]
+static BLK_REQUEST_VQ: SpinLock<Option<Box<VirtioVirtq>>> = SpinLock::new(None);
+static BLK_REQ: SpinLock<Option<Box<VirtioBlkReq>>> = SpinLock::new(None);
+static BLK_CAPACITY: SpinLock<Option<u64>> = SpinLock::new(None);
 
-void virtio_blk_init(void) {
-    if (virtio_reg_read32(VIRTIO_REG_MAGIC) != 0x74726976)
-        PANIC("virtio: invalid magic value");
-    if (virtio_reg_read32(VIRTIO_REG_VERSION) != 1)
-        PANIC("virtio: invalid version");
-    if (virtio_reg_read32(VIRTIO_REG_DEVICE_ID) != VIRTIO_DEVICE_BLK)
-        PANIC("virtio: invalid device id");
+pub fn virtio_blk_init() {
+    if virtio_reg_read32(VIRTIO_REG_MAGIC) != 0x74726976 {
+        panic!("virtio: invalid magic value");
+    };
+    if virtio_reg_read32(VIRTIO_REG_VERSION) != 1 {
+        panic!("virtio: invalid version");
+    };
 
-    // 1. Reset the device.
+    if virtio_reg_read32(VIRTIO_REG_DEVICE_ID) != VIRTIO_DEVICE_BLK {
+        panic!("virtio: invalid version");
+    };
+
+    // 1. Reset the device
     virtio_reg_write32(VIRTIO_REG_DEVICE_STATUS, 0);
-    // 2. Set the ACKNOWLEDGE status bit: the guest OS has noticed the device.
+    // 2. Set the ACKNOWLEDGE status bit: the guest OS has noticed the device
     virtio_reg_fetch_and_or32(VIRTIO_REG_DEVICE_STATUS, VIRTIO_STATUS_ACK);
     // 3. Set the DRIVER status bit.
     virtio_reg_fetch_and_or32(VIRTIO_REG_DEVICE_STATUS, VIRTIO_STATUS_DRIVER);
-    // 5. Set the FEATURES_OK status bit.
+    // 5. Set the FEATURES_OK status bit
     virtio_reg_fetch_and_or32(VIRTIO_REG_DEVICE_STATUS, VIRTIO_STATUS_FEAT_OK);
     // 7. Perform device-specific setup, including discovery of virtqueues for the device
-    blk_request_vq = virtq_init(0);
+    *BLK_REQUEST_VQ.lock() = Some(virtq_init(0));
     // 8. Set the DRIVER_OK status bit.
     virtio_reg_write32(VIRTIO_REG_DEVICE_STATUS, VIRTIO_STATUS_DRIVER_OK);
 
     // Get the disk capacity.
-    blk_capacity = virtio_reg_read64(VIRTIO_REG_DEVICE_CONFIG + 0) * SECTOR_SIZE;
-    printf("virtio-blk: capacity is %d bytes\n", blk_capacity);
+    *BLK_CAPACITY.lock() = Some(virtio_reg_read64(VIRTIO_REG_DEVICE_CONFIG + 0) * SECTOR_SIZE as u64);
+
+    match *BLK_CAPACITY.lock() {
+        Some(capacity) => println!("virtio-blk: capacity is {} bytes", capacity),
+        None => println!("virtio-blk: capacity is not initialized yet"),
+    }
 
     // Allocate a region to store requests to the device.
-    blk_req_paddr = alloc_pages(align_up(sizeof(*blk_req), PAGE_SIZE) / PAGE_SIZE);
-    blk_req = (struct virtio_blk_req *) blk_req_paddr;
+    *BLK_REQ.lock() = Some(Box::new(VirtioBlkReq::zeroed()));
 }
 ```
 
-```c [kernel.c] {5}
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
+We also need to initialise this in our main procedure in `main`.
 
-    virtio_blk_init(); // new
+```rust [kernel/src/main.rs] {10}
+fn kernel_main() -> ! {
+    let bss = &raw const __bss;
+    let bss_end = &raw const __bss_end;
+    // Safety: from linker script bss is aligned and bss segment is valid for writes up to bss_end
+    unsafe {
+        write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
+    }
+
+    write_csr!("stvec", kernel_entry as usize);
+
+    virtio_blk_init();
 ```
 
 ## Virtqueue initialization
