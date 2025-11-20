@@ -6,7 +6,7 @@ As I went I rewrote Seiya's guide to use Rust, which you can find here **([https
 
 My guide covers setting up Rust, using Cargo, writing the Rust code, and tying it all together with a simple build script.
 
+![Operating System in 1,000 Lines in Rust](./screenshot-rust.png)
+
 The actual guide (in C) is here 
 **[English](https://1000os.seiya.me/en)** ∙ **[日本語](https://1000os.seiya.me/ja/)** ∙ **[简体中文](https://1000os.seiya.me/zh/)** *(translated by [@YianAndCode](https://github.com/YianAndCode))* ∙ **[한국어](https://1000os.seiya.me/ko/)** *(translated by [@JoHwanhee](https://github.com/JoHwanhee))* ∙ **[繁體中文](https://1000os.seiya.me/tw/)** *(translated by [@alanhc](https://github.com/alanhc))*
-
-![Operating System in 1,000 Lines in Rust](./screenshot-rust.png)
