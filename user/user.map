@@ -1,11 +1,11 @@
      VMA      LMA     Size Align Out     In      Symbol
        0        0  1000000     1 . = 0x1000000
  1000000  1000000     1ede     4 .text
- 1000000  1000000       18     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text.start)
+ 1000000  1000000       18     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text.start)
  1000000  1000000        0     1                 .Lpcrel_hi0
  1000000  1000000        0     1                 $x
  1000000  1000000       18     1                 start
- 1000018  1000018       46     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.text._ZN42_$LT$$RF$T$u20$as$u20$core..fmt..Debug$GT$3fmt17hcca6d152cb4be765E)
+ 1000018  1000018       46     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.text._ZN42_$LT$$RF$T$u20$as$u20$core..fmt..Debug$GT$3fmt17hcca6d152cb4be765E)
  1000018  1000018        0     1                 .L0 
  1000018  1000018        0     1                 .L0 
  1000018  1000018        0     1                 $x
@@ -26,7 +26,7 @@
  100005e  100005e        0     1                 .L0 
  100005e  100005e        0     1                 .L0 
  100005e  100005e        0     1                 .L0 
- 100005e  100005e       28     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.text._ZN4core3fmt3num52_$LT$impl$u20$core..fmt..Debug$u20$for$u20$usize$GT$3fmt17hfe30df86295ed77bE)
+ 100005e  100005e       28     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.text._ZN4core3fmt3num52_$LT$impl$u20$core..fmt..Debug$u20$for$u20$usize$GT$3fmt17hfe30df86295ed77bE)
  100005e  100005e       28     1                 core::fmt::num::_$LT$impl$u20$core..fmt..Debug$u20$for$u20$usize$GT$::fmt::hfe30df86295ed77b
  100005e  100005e        0     1                 .L0 
  100005e  100005e        0     1                 .L0 
@@ -40,7 +40,7 @@
  1000086  1000086        0     1                 .L0 
  1000086  1000086        0     1                 .L0 
  1000086  1000086        0     1                 .L0 
- 1000086  1000086       54     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.text._ZN64_$LT$core..str..error..Utf8Error$u20$as$u20$core..fmt..Debug$GT$3fmt17h089a17259138de70E)
+ 1000086  1000086       54     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.text._ZN64_$LT$core..str..error..Utf8Error$u20$as$u20$core..fmt..Debug$GT$3fmt17h089a17259138de70E)
  1000086  1000086       54     1                 _$LT$core..str..error..Utf8Error$u20$as$u20$core..fmt..Debug$GT$::fmt::h089a17259138de70
  1000086  1000086        0     1                 .L0 
  1000086  1000086        0     1                 .L0 
@@ -50,7 +50,7 @@
  1000092  1000092        0     1                 .L0 
  10000d4  10000d4        0     1                 .L0 
  10000da  10000da        0     1                 .L0 
- 10000da  10000da      3f4     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.text.main)
+ 10000da  10000da      3f4     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.text.main)
  10000da  10000da        0     1                 .L0 
  10000da  10000da        0     1                 .L0 
  10000da  10000da        0     1                 $x
@@ -249,7 +249,7 @@
  10004ce  10004ce        0     1                 .L0 
  10004ce  10004ce        0     1                 .L0 
  10004ce  10004ce        0     1                 .L0 
- 10004ce  10004ce      25a     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.text._ZN4core3str21_$LT$impl$u20$str$GT$12trim_matches17h8206b8fe8ece05e8E)
+ 10004ce  10004ce      25a     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.text._ZN4core3str21_$LT$impl$u20$str$GT$12trim_matches17h8206b8fe8ece05e8E)
  10004ce  10004ce        0     1                 .L0 
  10004ce  10004ce        0     1                 .L0 
  10004ce  10004ce        0     1                 $x
@@ -451,12 +451,12 @@
  1000728  1000728        0     1                 .L0 
  1000728  1000728        0     1                 .L0 
  1000728  1000728        0     1                 .L0 
- 1000728  1000728       d8     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.text._ZN4core3fmt5Write10write_char17hf0d114ee04469782E.llvm.485803936619810948)
+ 1000728  1000728       d8     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.text._ZN4core3fmt5Write10write_char17hf0d114ee04469782E.llvm.17442365220782818561)
  1000728  1000728        0     1                 .L0 
  1000728  1000728        0     1                 .L0 
  1000728  1000728        0     1                 $x
  1000728  1000728        0     1                 .L0 
- 1000728  1000728       d8     1                 core::fmt::Write::write_char::hf0d114ee04469782 (.llvm.485803936619810948)
+ 1000728  1000728       d8     1                 core::fmt::Write::write_char::hf0d114ee04469782 (.llvm.17442365220782818561)
  100072c  100072c        0     1                 .L0 
  1000730  1000730        0     1                 .L0 
  1000732  1000732        0     1                 .L0 
@@ -530,7 +530,7 @@
  1000800  1000800        0     1                 .L0 
  1000800  1000800        0     1                 .L0 
  1000800  1000800        0     1                 .L0 
- 1000800  1000800       34     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.text._ZN4core3fmt5Write9write_fmt17h981a11136789de91E)
+ 1000800  1000800       34     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.text._ZN4core3fmt5Write9write_fmt17h981a11136789de91E)
  1000800  1000800        0     1                 .L0 
  1000800  1000800        0     1                 .L0 
  1000800  1000800        0     1                 $x
@@ -540,7 +540,7 @@
  1000804  1000804        0     1                 .L0 
  100082e  100082e        0     1                 .L0 
  1000834  1000834        0     1                 .L0 
- 1000834  1000834       2a     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.text._ZN42_$LT$$RF$T$u20$as$u20$core..fmt..Debug$GT$3fmt17ha9c3ef6b4f7a5061E)
+ 1000834  1000834       2a     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.text._ZN42_$LT$$RF$T$u20$as$u20$core..fmt..Debug$GT$3fmt17ha9c3ef6b4f7a5061E)
  1000834  1000834        0     1                 .L0 
  1000834  1000834        0     1                 .L0 
  1000834  1000834        0     1                 $x
@@ -558,7 +558,7 @@
  100085e  100085e        0     1                 .L0 
  100085e  100085e        0     1                 .L0 
  100085e  100085e        0     1                 .L0 
- 100085e  100085e       14     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.text._ZN44_$LT$$RF$T$u20$as$u20$core..fmt..Display$GT$3fmt17h104f8a34a39fbfadE)
+ 100085e  100085e       14     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.text._ZN44_$LT$$RF$T$u20$as$u20$core..fmt..Display$GT$3fmt17h104f8a34a39fbfadE)
  100085e  100085e        0     1                 .L0 
  100085e  100085e        0     1                 .L0 
  100085e  100085e        0     1                 $x
@@ -566,7 +566,7 @@
  100085e  100085e       14     1                 _$LT$$RF$T$u20$as$u20$core..fmt..Display$GT$::fmt::h104f8a34a39fbfad
  1000864  1000864        0     1                 .L0 
  1000872  1000872        0     1                 .L0 
- 1000872  1000872        2     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text._RNvCsj4CZ6flxxfE_7___rustc17rust_begin_unwind)
+ 1000872  1000872        2     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text._RNvCsj4CZ6flxxfE_7___rustc17rust_begin_unwind)
  1000872  1000872        0     1                 .L0 
  1000872  1000872        0     1                 .L0 
  1000872  1000872        0     1                 $x
@@ -575,7 +575,7 @@
  1000874  1000874        0     1                 .L0 
  1000874  1000874        0     1                 .L0 
  1000874  1000874        0     1                 .L0 
- 1000874  1000874       14     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text.put_byte)
+ 1000874  1000874       14     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text.put_byte)
  1000874  1000874        0     1                 .L0 
  1000874  1000874        0     1                 .L0 
  1000874  1000874        0     1                 $x
@@ -585,7 +585,7 @@
  1000882  1000882        0     1                 .L0 
  1000886  1000886        0     1                 .L0 
  1000888  1000888        0     1                 .L0 
- 1000888  1000888       16     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text._ZN4user8get_char17h2da7bce6c85a9a81E)
+ 1000888  1000888       16     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text._ZN4user8get_char17h2da7bce6c85a9a81E)
  1000888  1000888        0     1                 .L0 
  1000888  1000888        0     1                 .L0 
  1000888  1000888        0     1                 $x
@@ -595,7 +595,7 @@
  1000898  1000898        0     1                 .L0 
  100089c  100089c        0     1                 .L0 
  100089e  100089e        0     1                 .L0 
- 100089e  100089e       38     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text.unlikely.exit)
+ 100089e  100089e       38     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text.unlikely.exit)
  100089e  100089e        0     1                 .L0 
  100089e  100089e        0     1                 .L0 
  100089e  100089e        0     1                 $x
@@ -609,7 +609,7 @@
  10008ba  10008ba        0     1                 .L0 
  10008c4  10008c4        0     1                 .L0 
  10008d6  10008d6        0     1                 .L0 
- 10008d6  10008d6        8     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text._ZN4user8readfile17h5bca4856c46131a3E)
+ 10008d6  10008d6        8     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text._ZN4user8readfile17h5bca4856c46131a3E)
  10008d6  10008d6        0     1                 .L0 
  10008d6  10008d6        0     1                 .L0 
  10008d6  10008d6        0     1                 $x
@@ -617,7 +617,7 @@
  10008d6  10008d6        8     1                 user::readfile::h5bca4856c46131a3
  10008dc  10008dc        0     1                 .L0 
  10008de  10008de        0     1                 .L0 
- 10008de  10008de        8     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.text._ZN4user9writefile17h227c761c182fbe8bE)
+ 10008de  10008de        8     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.text._ZN4user9writefile17h227c761c182fbe8bE)
  10008de  10008de        0     1                 .L0 
  10008de  10008de        0     1                 .L0 
  10008de  10008de        0     1                 $x
@@ -625,7 +625,7 @@
  10008de  10008de        8     1                 user::writefile::h227c761c182fbe8b
  10008e4  10008e4        0     1                 .L0 
  10008e6  10008e6        0     1                 .L0 
- 10008e6  10008e6       34     2         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.text._ZN64_$LT$common..print..DebugConsole$u20$as$u20$core..fmt..Write$GT$9write_str17h09c52425d07c0b8aE)
+ 10008e6  10008e6       34     2         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.text._ZN64_$LT$common..print..DebugConsole$u20$as$u20$core..fmt..Write$GT$9write_str17h09c52425d07c0b8aE)
  10008e6  10008e6        0     1                 .L0 
  10008e6  10008e6        0     1                 .L0 
  10008e6  10008e6        0     1                 $x
@@ -2081,81 +2081,81 @@
  1001ede  1001ede        0     1                 .L0 
  1001ee0  1001ee0      533     4 .rodata
  1001ee0  1001ee0        c     1         <internal>:(.rodata.cst4)
- 1001eec  1001eec       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.rodata..Lanon.8041ba34ed97393764330cae849ea6c9.1)
+ 1001eec  1001eec       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.rodata..Lanon.8041ba34ed97393764330cae849ea6c9.1)
  1001eec  1001eec       10     1                 .Lanon.8041ba34ed97393764330cae849ea6c9.1
  1001eec  1001eec        0     1                 $d
- 1001efc  1001efc       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.0)
+ 1001efc  1001efc       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.0)
  1001efc  1001efc       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.0
  1001efc  1001efc        0     1                 $d
- 1001f0c  1001f0c       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.1)
+ 1001f0c  1001f0c       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.1)
  1001f0c  1001f0c       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.1
  1001f0c  1001f0c        0     1                 $d
- 1001f1c  1001f1c       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.2)
+ 1001f1c  1001f1c       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.2)
  1001f1c  1001f1c       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.2
  1001f1c  1001f1c        0     1                 $d
- 1001f2c  1001f2c        9     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.3)
+ 1001f2c  1001f2c        9     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.3)
  1001f2c  1001f2c        9     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.3
  1001f2c  1001f2c        0     1                 $d
- 1001f35  1001f35        b     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.4)
+ 1001f35  1001f35        b     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.4)
  1001f35  1001f35        b     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.4
  1001f35  1001f35        0     1                 $d
- 1001f40  1001f40        9     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.5)
+ 1001f40  1001f40        9     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.5)
  1001f40  1001f40        9     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.5
  1001f40  1001f40        0     1                 $d
- 1001f49  1001f49        2     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.6)
+ 1001f49  1001f49        2     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.6)
  1001f49  1001f49        2     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.6
  1001f49  1001f49        0     1                 $d
- 1001f4b  1001f4b        1     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.8)
+ 1001f4b  1001f4b        1     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.8)
  1001f4b  1001f4b        1     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.8
  1001f4b  1001f4b        0     1                 $d
  1001f4c  1001f4c       26     1         <internal>:(.rodata.str1.1)
- 1001f74  1001f74       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.11)
+ 1001f74  1001f74       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.11)
  1001f74  1001f74       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.11
  1001f74  1001f74        0     1                 $d
- 1001f84  1001f84       1c     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.12)
+ 1001f84  1001f84       1c     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.12)
  1001f84  1001f84       1c     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.12
  1001f84  1001f84        0     1                 $d
- 1001fa0  1001fa0       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.13)
+ 1001fa0  1001fa0       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.13)
  1001fa0  1001fa0       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.13
  1001fa0  1001fa0        0     1                 $d
- 1001fb0  1001fb0        5     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.14)
+ 1001fb0  1001fb0        5     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.14)
  1001fb0  1001fb0        5     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.14
  1001fb0  1001fb0        0     1                 $d
  1001fb5  1001fb5       10     1         <internal>:(.rodata.cst8)
- 1001fc5  1001fc5        9     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.17)
+ 1001fc5  1001fc5        9     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.17)
  1001fc5  1001fc5        9     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.17
  1001fc5  1001fc5        0     1                 $d
- 1001fce  1001fce       11     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.18)
+ 1001fce  1001fce       11     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.18)
  1001fce  1001fce       11     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.18
  1001fce  1001fce        0     1                 $d
- 1001fe0  1001fe0       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.19)
+ 1001fe0  1001fe0       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.19)
  1001fe0  1001fe0       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.19
  1001fe0  1001fe0        0     1                 $d
- 1001ff0  1001ff0       15     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.20)
+ 1001ff0  1001ff0       15     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.20)
  1001ff0  1001ff0       15     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.20
  1001ff0  1001ff0        0     1                 $d
- 1002005  1002005        9     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.22)
+ 1002005  1002005        9     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.22)
  1002005  1002005        9     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.22
  1002005  1002005        0     1                 $d
- 100200e  100200e       21     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.23)
+ 100200e  100200e       21     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.23)
  100200e  100200e       21     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.23
  100200e  100200e        0     1                 $d
- 1002030  1002030       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.25)
+ 1002030  1002030       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.25)
  1002030  1002030       10     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.25
  1002030  1002030        0     1                 $d
- 1002040  1002040       1d     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.26)
+ 1002040  1002040       1d     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.rodata..Lanon.fad58de7366495db4650cfefac2fcd61.26)
  1002040  1002040       1d     1                 .Lanon.fad58de7366495db4650cfefac2fcd61.26
  1002040  1002040        0     1                 $d
- 1002060  1002060       18     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.rodata.anon.0860157b6789d3a912692f44d3ae19a1.0.llvm.485803936619810948)
+ 1002060  1002060       18     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.rodata.anon.0860157b6789d3a912692f44d3ae19a1.0.llvm.17442365220782818561)
  1002060  1002060        0     1                 $d
- 1002060  1002060       18     1                 anon.0860157b6789d3a912692f44d3ae19a1.0.llvm.485803936619810948
- 1002078  1002078       37     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.0)
+ 1002060  1002060       18     1                 anon.0860157b6789d3a912692f44d3ae19a1.0.llvm.17442365220782818561
+ 1002078  1002078       37     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.0)
  1002078  1002078       37     1                 .Lanon.d80a308ad3275f920ce1a78b7ecab235.0
  1002078  1002078        0     1                 $d
- 10020b0  10020b0        8     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.1)
+ 10020b0  10020b0        8     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.1)
  10020b0  10020b0        8     1                 .Lanon.d80a308ad3275f920ce1a78b7ecab235.1
  10020b0  10020b0        0     1                 $d
- 10020b8  10020b8       10     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.3)
+ 10020b8  10020b8       10     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.rodata..Lanon.d80a308ad3275f920ce1a78b7ecab235.3)
  10020b8  10020b8       10     1                 .Lanon.d80a308ad3275f920ce1a78b7ecab235.3
  10020b8  10020b8        0     1                 $d
  10020c8  10020c8       20     1         <internal>:(.rodata.cst32)
@@ -2222,17 +2222,17 @@
  1012420  1012420        0     1         __user_stack_top = .
  1012420  1012420        0     1         
        0        0     2058     1 .debug_loc
-       0        0       91     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_loc)
+       0        0       91     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_loc)
        0        0        0     1                 .L0 
        0        0        0     1                 $d
       47       47        0     1                 .L0 
       7e       7e        0     1                 .L0 
-      91       91       5a     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_loc)
+      91       91       5a     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_loc)
       91       91        0     1                 .L0 
       91       91        0     1                 $d
       a4       a4        0     1                 .L0 
       cd       cd        0     1                 .L0 
-      eb       eb      be8     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_loc)
+      eb       eb      be8     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_loc)
       eb       eb        0     1                 .L0 
       eb       eb        0     1                 $d
      111      111        0     1                 .L0 
@@ -2298,7 +2298,7 @@
      c4a      c4a        0     1                 .L0 
      c97      c97        0     1                 .L0 
      cb5      cb5        0     1                 .L0 
-     cd3      cd3      e39     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_loc)
+     cd3      cd3      e39     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_loc)
      cd3      cd3        0     1                 .L0 
      cd3      cd3        0     1                 $d
      d1d      d1d        0     1                 .L0 
@@ -2367,7 +2367,7 @@
     1ab0     1ab0        0     1                 .L0 
     1ad6     1ad6        0     1                 .L0 
     1af1     1af1        0     1                 .L0 
-    1b0c     1b0c      295     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_loc)
+    1b0c     1b0c      295     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_loc)
     1b0c     1b0c        0     1                 .L0 
     1b0c     1b0c        0     1                 $d
     1b48     1b48        0     1                 .L0 
@@ -2383,14 +2383,14 @@
     1d4e     1d4e        0     1                 .L0 
     1d69     1d69        0     1                 .L0 
     1d85     1d85        0     1                 .L0 
-    1da1     1da1       9d     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_loc)
+    1da1     1da1       9d     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_loc)
     1da1     1da1        0     1                 .L0 
     1da1     1da1        0     1                 $d
     1dbc     1dbc        0     1                 .L0 
     1dd7     1dd7        0     1                 .L0 
     1df2     1df2        0     1                 .L0 
     1e0d     1e0d        0     1                 .L0 
-    1e3e     1e3e      1ad     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_loc)
+    1e3e     1e3e      1ad     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_loc)
     1e3e     1e3e        0     1                 .L0 
     1e3e     1e3e        0     1                 $d
     1e64     1e64        0     1                 .L0 
@@ -2404,28 +2404,28 @@
     1f7c     1f7c        0     1                 .L0 
     1f9c     1f9c        0     1                 .L0 
     1fcb     1fcb        0     1                 .L0 
-    1feb     1feb       6d     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_loc)
+    1feb     1feb       6d     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_loc)
     1feb     1feb        0     1                 .L0 
     1feb     1feb        0     1                 $d
     1ffe     1ffe        0     1                 .L0 
     2016     2016        0     1                 .L0 
     2045     2045        0     1                 .L0 
        0        0     24c6     1 .debug_abbrev
-       0        0       91     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_abbrev)
+       0        0       91     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_abbrev)
        0        0        0     1                 $d
-      91       91      168     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_abbrev)
+      91       91      168     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_abbrev)
       91       91        0     1                 $d
-     1f9      1f9      435     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_abbrev)
+     1f9      1f9      435     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_abbrev)
      1f9      1f9        0     1                 $d
-     62e      62e      23c     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_abbrev)
+     62e      62e      23c     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_abbrev)
      62e      62e        0     1                 $d
-     86a      86a      1f0     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_abbrev)
+     86a      86a      1f0     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_abbrev)
      86a      86a        0     1                 $d
-     a5a      a5a      176     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_abbrev)
+     a5a      a5a      176     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_abbrev)
      a5a      a5a        0     1                 $d
-     bd0      bd0      221     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_abbrev)
+     bd0      bd0      221     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_abbrev)
      bd0      bd0        0     1                 $d
-     df1      df1      1cf     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_abbrev)
+     df1      df1      1cf     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_abbrev)
      df1      df1        0     1                 $d
      fc0      fc0      30c     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcore-105862d2f8f1624b.rlib(core-105862d2f8f1624b.core.87f146b0ea23b1f4-cgu.0.rcgu.o):(.debug_abbrev)
      fc0      fc0        0     1                 $d
@@ -2484,28 +2484,28 @@
     240d     240d       b9     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcompiler_builtins-47eef77c012a25df.rlib(compiler_builtins-47eef77c012a25df.compiler_builtins.5aaf534a5da58f71-cgu.350.rcgu.o):(.debug_abbrev)
     240d     240d        0     1                 $d
        0        0    2b84d     1 .debug_info
-       0        0       df     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_info)
+       0        0       df     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_info)
        0        0        0     1                 .L0 
        0        0        0     1                 $d
-      df       df      32c     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_info)
+      df       df      32c     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_info)
       df       df        0     1                 .L0 
       df       df        0     1                 $d
-     40b      40b     1e6d     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_info)
+     40b      40b     1e6d     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_info)
      40b      40b        0     1                 .L0 
      40b      40b        0     1                 $d
-    2278     2278     18ce     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_info)
+    2278     2278     18ce     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_info)
     2278     2278        0     1                 .L0 
     2278     2278        0     1                 $d
-    3b46     3b46      7c4     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_info)
+    3b46     3b46      7c4     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_info)
     3b46     3b46        0     1                 .L0 
     3b46     3b46        0     1                 $d
-    430a     430a      30e     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_info)
+    430a     430a      30e     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_info)
     430a     430a        0     1                 .L0 
     430a     430a        0     1                 $d
-    4618     4618      9ca     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_info)
+    4618     4618      9ca     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_info)
     4618     4618        0     1                 .L0 
     4618     4618        0     1                 $d
-    4fe2     4fe2      578     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_info)
+    4fe2     4fe2      578     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_info)
     4fe2     4fe2        0     1                 .L0 
     4fe2     4fe2        0     1                 $d
     555a     555a    204cd     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcore-105862d2f8f1624b.rlib(core-105862d2f8f1624b.core.87f146b0ea23b1f4-cgu.0.rcgu.o):(.debug_info)
@@ -2593,21 +2593,21 @@
    2b675    2b675        0     1                 .L0 
    2b675    2b675        0     1                 $d
        0        0     1658     1 .debug_aranges
-       0        0       20     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_aranges)
+       0        0       20     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_aranges)
        0        0        0     1                 $d
-      20       20       28     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_aranges)
+      20       20       28     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_aranges)
       20       20        0     1                 $d
-      48       48       48     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_aranges)
+      48       48       48     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_aranges)
       48       48        0     1                 $d
-      90       90       28     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_aranges)
+      90       90       28     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_aranges)
       90       90        0     1                 $d
-      b8       b8       30     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_aranges)
+      b8       b8       30     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_aranges)
       b8       b8        0     1                 $d
-      e8       e8       28     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_aranges)
+      e8       e8       28     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_aranges)
       e8       e8        0     1                 $d
-     110      110       50     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_aranges)
+     110      110       50     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_aranges)
      110      110        0     1                 $d
-     160      160       20     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_aranges)
+     160      160       20     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_aranges)
      160      160        0     1                 $d
      180      180     10e8     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcore-105862d2f8f1624b.rlib(core-105862d2f8f1624b.core.87f146b0ea23b1f4-cgu.0.rcgu.o):(.debug_aranges)
      180      180        0     1                 $d
@@ -2665,63 +2665,63 @@
     1618     1618        0     1                 $d
     1638     1638       20     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcompiler_builtins-47eef77c012a25df.rlib(compiler_builtins-47eef77c012a25df.compiler_builtins.5aaf534a5da58f71-cgu.350.rcgu.o):(.debug_aranges)
     1638     1638        0     1                 $d
-       0        0    43daa     1 .debug_str
-       0        0    43daa     1         <internal>:(.debug_str)
+       0        0    43dc9     1 .debug_str
+       0        0    43dc9     1         <internal>:(.debug_str)
        0        0       8b     1 .comment
        0        0       8b     1         <internal>:(.comment)
        0        0       47     1 .riscv.attributes
        0        0       47     1         <internal>:(.riscv.attributes)
        0        0      288     4 .debug_frame
-       0        0       30     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_frame)
+       0        0       30     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_frame)
        0        0        0     1                 .L0 
        0        0        0     1                 $d
-      30       30       30     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_frame)
+      30       30       30     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_frame)
       30       30        0     1                 .L0 
       30       30        0     1                 $d
-      60       60       70     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_frame)
+      60       60       70     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_frame)
       60       60        0     1                 .L0 
       60       60        0     1                 $d
-      d0       d0       60     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_frame)
+      d0       d0       60     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_frame)
       d0       d0        0     1                 .L0 
       d0       d0        0     1                 $d
-     130      130       64     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_frame)
+     130      130       64     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_frame)
      130      130        0     1                 .L0 
      130      130        0     1                 $d
-     194      194       34     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_frame)
+     194      194       34     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_frame)
      194      194        0     1                 .L0 
      194      194        0     1                 $d
-     1c8      1c8       88     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_frame)
+     1c8      1c8       88     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_frame)
      1c8      1c8        0     1                 .L0 
      1c8      1c8        0     1                 $d
-     250      250       38     4         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_frame)
+     250      250       38     4         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_frame)
      250      250        0     1                 .L0 
      250      250        0     1                 $d
        0        0    2f854     1 .debug_line
-       0        0       c9     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.0pzpaly.rcgu.o:(.debug_line)
+       0        0       c9     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.2fcv6wf83wk8dj7r3ym0lzq10.1ijbjyj.rcgu.o:(.debug_line)
        0        0        0     1                 .Lline_table_start0
        0        0        0     1                 $d
-      c9       c9      14d     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_line)
+      c9       c9      14d     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_line)
       c9       c9        0     1                 .Lline_table_start0
       c9       c9        0     1                 $d
-     216      216      e1f     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_line)
+     216      216      e1f     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_line)
      216      216        0     1                 .Lline_table_start0
      216      216        0     1                 $d
      b50      b50        0     1                 .Lline_table_start1
      be3      be3        0     1                 .Lline_table_start2
      c78      c78        0     1                 .Lline_table_start3
-    1035     1035      9a1     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_line)
+    1035     1035      9a1     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_line)
     1035     1035        0     1                 .Lline_table_start0
     1035     1035        0     1                 $d
-    19d6     19d6      29f     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_line)
+    19d6     19d6      29f     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_line)
     19d6     19d6        0     1                 .Lline_table_start0
     19d6     19d6        0     1                 $d
-    1c75     1c75       fe     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_line)
+    1c75     1c75       fe     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_line)
     1c75     1c75        0     1                 .Lline_table_start0
     1c75     1c75        0     1                 $d
-    1d73     1d73      194     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_line)
+    1d73     1d73      194     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_line)
     1d73     1d73        0     1                 .Lline_table_start0
     1d73     1d73        0     1                 $d
-    1f07     1f07      2f6     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_line)
+    1f07     1f07      2f6     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_line)
     1f07     1f07        0     1                 .Lline_table_start0
     1f07     1f07        0     1                 $d
     21fd     21fd    255bf     1         /home/thomas/.rustup/toolchains/stable-aarch64-unknown-linux-gnu/lib/rustlib/riscv32imac-unknown-none-elf/lib/libcore-105862d2f8f1624b.rlib(core-105862d2f8f1624b.core.87f146b0ea23b1f4-cgu.0.rcgu.o):(.debug_line)
@@ -2833,10 +2833,10 @@
    2f545    2f545        0     1                 $d
    2f77f    2f77f        0     1                 .Lline_table_start1
        0        0     d460     1 .debug_ranges
-       0        0       18     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.0pzpaly.rcgu.o:(.debug_ranges)
+       0        0       18     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.4rvkthtycqidzx4w9jo5cf4lw.1ijbjyj.rcgu.o:(.debug_ranges)
        0        0        0     1                 .L0 
        0        0        0     1                 $d
-      18       18      270     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.0pzpaly.rcgu.o:(.debug_ranges)
+      18       18      270     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.72u0zdbzn4kttmov3utmaz0ka.1ijbjyj.rcgu.o:(.debug_ranges)
       18       18        0     1                 .L0 
       18       18        0     1                 $d
       48       48        0     1                 .L0 
@@ -2857,7 +2857,7 @@
      230      230        0     1                 .L0 
      250      250        0     1                 .L0 
      268      268        0     1                 .L0 
-     288      288      420     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.0pzpaly.rcgu.o:(.debug_ranges)
+     288      288      420     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.92yy4o4vt4ygxqol69p0n1hv7.1ijbjyj.rcgu.o:(.debug_ranges)
      288      288        0     1                 .L0 
      288      288        0     1                 $d
      2e0      2e0        0     1                 .L0 
@@ -2886,21 +2886,21 @@
      630      630        0     1                 .L0 
      668      668        0     1                 .L0 
      690      690        0     1                 .L0 
-     6a8      6a8       b0     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.0pzpaly.rcgu.o:(.debug_ranges)
+     6a8      6a8       b0     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dfxjlscrbx9a479kpv5cvw77c.1ijbjyj.rcgu.o:(.debug_ranges)
      6a8      6a8        0     1                 .L0 
      6a8      6a8        0     1                 $d
      6d0      6d0        0     1                 .L0 
      6f0      6f0        0     1                 .L0 
      718      718        0     1                 .L0 
      740      740        0     1                 .L0 
-     758      758       30     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.0pzpaly.rcgu.o:(.debug_ranges)
+     758      758       30     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/shell-7d3ed97ad70682b6.dorzut370j2h9tfx57zu80d5c.1ijbjyj.rcgu.o:(.debug_ranges)
      758      758        0     1                 .L0 
      758      758        0     1                 $d
      770      770        0     1                 .L0 
-     788      788       40     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1ttim9z.rcgu.o):(.debug_ranges)
+     788      788       40     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libuser-53d60b54b1be8e33.rlib(user-53d60b54b1be8e33.50ox71ary2wk0lqjjh04wln10.1c76io9.rcgu.o):(.debug_ranges)
      788      788        0     1                 .L0 
      788      788        0     1                 $d
-     7c8      7c8       38     1         /home/thomas/src/os1k/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_ranges)
+     7c8      7c8       38     1         /home/thomas/src/os1k-complete/target/riscv32imac-unknown-none-elf/debug/deps/libcommon-cf1d83795d308351.rlib(common-cf1d83795d308351.bbs6s8lnhoytg91x7msab1wed.0vu5gn9.rcgu.o):(.debug_ranges)
      7c8      7c8        0     1                 .L0 
      7c8      7c8        0     1                 $d
      7e0      7e0        0     1                 .L0 
@@ -4483,5 +4483,5 @@
        0        0    11020     4         <internal>:(.symtab)
        0        0       af     1 .shstrtab
        0        0       af     1         <internal>:(.shstrtab)
-       0        0     6f85     1 .strtab
-       0        0     6f85     1         <internal>:(.strtab)
+       0        0     6f89     1 .strtab
+       0        0     6f89     1         <internal>:(.strtab)

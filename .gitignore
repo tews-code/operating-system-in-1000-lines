@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 target/
 kernel.elf
 kernel/kernel.map
-=======
+user/user.map
 *.map
 *.tar
 *.o
@@ -11,4 +10,3 @@ kernel/kernel.map
 *.log
 *.pcap
 *.epub
->>>>>>> e519e74d33328c87f58e97558cd8477b396f8948
