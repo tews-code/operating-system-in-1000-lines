@@ -11,8 +11,6 @@ The actual guide (in C) is here
 
 ![Operating System in 1,000 Lines](./screenshot.png)
 
-This repository contains the source code for the website [Operating System in 1,000 Lines](https://1000os.seiya.me/), and a reference implementation.
-
 ## More interesting implementations
 
 Let me know if you have implemented something interesting!
