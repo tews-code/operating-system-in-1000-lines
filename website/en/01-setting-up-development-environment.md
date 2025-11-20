@@ -112,8 +112,10 @@ If you are using other OSes, get the following tools:
 If you're using a Git repository, use the following `.gitignore` file:
 
 ```gitignore [.gitignore]
-/disk/*
-!/disk/.gitkeep
+target/
+kernel.elf
+kernel/kernel.map
+user/user.map
 *.map
 *.tar
 *.o
@@ -121,6 +123,7 @@ If you're using a Git repository, use the following `.gitignore` file:
 *.bin
 *.log
 *.pcap
+*.epub
 ```
 
 You're all set! Let's start building your first operating system!
