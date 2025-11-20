@@ -72,7 +72,7 @@ os1k                     - Root folder and operating system name
 |   └── user.ld          - User: linker script (memory layout definition)
 ├── ./cargo              - Workspace config folder
 |   └── config.toml      - Workspace config file
-├── build.sh             - Build script
+├── os1k.sh              - Build script
 └── run.sh               - Runner script
 ```
 
