@@ -2,7 +2,7 @@
 
 I am new to Rust and operating systems. I wanted to learn as much as I could from the excellent guide written by Seiya Nuta and this is the result. It comes it at just over 1,300 lines, but I didn't want to cut this down too much further by using tricks that made the logic less clear.
 
-As I went I (re) wrote Seiya's guide, which you can find here **(https://github.com/tews-code/operating-system-in-1000-lines/en)**.
+As I went I (re) wrote Seiya's guide, which you can find here **([https://github.com/tews-code/operating-system-in-1000-lines/en](https://github.com/tews-code/operating-system-in-1000-lines/blob/main/website/en/01-setting-up-development-environment.md))**.
 
 My guide covers setting up Rust, using Cargo, and tying it all together with a simple build script.
 
