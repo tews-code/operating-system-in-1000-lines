@@ -124,7 +124,7 @@ fn main() {
 You'll see the charming message on the screen:
 
 ```
-$ ./run.sh
+$ ./os1k.sh
 Hello world from the shell!
 ```
 
@@ -294,7 +294,7 @@ It reads characters until a newline comes, and checks if the entered string matc
 Let's try typing `hello` command:
 
 ```
-$ ./run.sh
+$ ./os1k.sh
 
 > hello
 Hello world from the shell! 🐚
@@ -392,12 +392,13 @@ fn handle_syscall(f: &mut TrapFrame) {
 You're done! Let's try running it:
 
 ```
-$ ./run.sh
+$ ./os1k.sh
 
 > exit
 process 1 exited
-⚠️ Panic: panicked at kernel/src/main.rs:98:5:
+⚠️ Panic: panicked at kernel/src/main.rs:111:5:
 switched to idle process
+
 ```
 
 When the `exit` command is executed, the shell process terminates via system call, and there are no other runnable processes remaining. As a result, the scheduler will select the idle process and cause a panic.

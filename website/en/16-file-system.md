@@ -514,18 +514,25 @@ In RISC-V, the behavior of S-Mode (kernel) can be configured through  `sstatus` 
 
 All we need to do is to set the `SUM` bit when entering user space. Define the position of the `SUM` bit as follows:
 
-```rust [kernel/src/process.rs] {2, 10}
+```rust [kernel/src/entry.rs] {6, 17}
+// The base virtual address of an application image. This needs to match the
+// starting address defined in `user.ld`.
+pub const USER_BASE: usize = 0x1000000;
+
 const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
 const SSTATUS_SUM: usize = 1 << 18;
 
-fn user_entry() {
-    unsafe{asm!(
-        "csrw sepc, {sepc}",
-        "csrw sstatus, {sstatus}",
+#[unsafe(naked)]
+pub extern "C" fn  user_entry() {
+    naked_asm!(
+        "li t0, {user_base}",
+        "csrw sepc, t0",
+        "li t0, {sstatus}",
+        "csrw sstatus, t0",
         "sret",
-        sepc = in(reg) USER_BASE,
-        sstatus = in(reg) (SSTATUS_SPIE | SSTATUS_SUM),
-    )}
+        user_base = const USER_BASE,
+        sstatus = const SSTATUS_SPIE | SSTATUS_SUM,
+    )
 }
 ```
 

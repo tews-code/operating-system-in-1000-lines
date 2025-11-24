@@ -15,11 +15,10 @@ use common::{
     SYS_WRITEFILE,
 };
 
-// pub mod syscall;
-
 #[panic_handler]
-pub fn panic(_panic: &PanicInfo) -> ! {
-    loop {}
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("😬 User Panic! {}", info);
+    exit();
 }
 
 unsafe extern "C" {
@@ -83,3 +82,4 @@ unsafe extern "C" fn start() {
         stack_top = sym __user_stack_top
     )
 }
+

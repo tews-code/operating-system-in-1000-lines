@@ -138,6 +138,26 @@ pub unsafe extern "C" fn kernel_entry() {
     )
 }
 
+// The base virtual address of an application image. This needs to match the
+// starting address defined in `user.ld`.
+pub const USER_BASE: usize = 0x1000000;
+
+const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
+const SSTATUS_SUM: usize = 1 << 18;
+
+#[unsafe(naked)]
+pub extern "C" fn  user_entry() {
+    naked_asm!(
+        "li t0, {user_base}",
+        "csrw sepc, t0",
+        "li t0, {sstatus}",
+        "csrw sstatus, t0",
+        "sret",
+        user_base = const USER_BASE,
+        sstatus = const SSTATUS_SPIE | SSTATUS_SUM,
+    )
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn handle_trap(f: &mut TrapFrame) {
     let scause = read_csr!("scause");

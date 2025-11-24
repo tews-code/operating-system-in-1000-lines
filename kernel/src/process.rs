@@ -3,11 +3,11 @@
 use alloc::slice;
 use alloc::boxed::Box;
 
-use core::arch::{asm, naked_asm};
-use core::fmt;
+use core::arch::naked_asm;
 
 use crate::address::{align_up, PAddr, VAddr};
 use crate::allocator::PAGE_SIZE;
+use crate::entry::{user_entry, USER_BASE};
 use crate::page::{map_page, PageTable, PAGE_R, PAGE_W, PAGE_X, PAGE_U};
 use crate::spinlock::SpinLock;
 use crate::virtio::VIRTIO_BLK_PADDR;
@@ -79,22 +79,6 @@ impl Procs {
 
 pub static PROCS: Procs = Procs::new();  // All process control structures.
 
-// The base virtual address of an application image. This needs to match the
-// starting address defined in `user.ld`.
-const USER_BASE: usize = 0x1000000;
-const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
-const SSTATUS_SUM: usize = 1 << 18;
-
-fn user_entry() {
-    unsafe{asm!(
-        "csrw sepc, {sepc}",
-        "csrw sstatus, {sstatus}",
-        "sret",
-        sepc = in(reg) USER_BASE,
-        sstatus = in(reg) (SSTATUS_SPIE | SSTATUS_SUM),
-    )}
-}
-
 pub fn create_process(image: *const u8, image_size: usize) -> usize {
     let mut procs = PROCS.0.lock();
 
@@ -107,7 +91,7 @@ pub fn create_process(image: *const u8, image_size: usize) -> usize {
     // Stack callee-saved registers. These register values will be restored in
     // the first context switch in switch_context.
     let callee_saved_regs: [usize; 13] = [
-        user_entry as usize,            // ra
+        user_entry as *const () as usize,            // ra
         0,             // s0
         0,             // s1
         0,             // s2

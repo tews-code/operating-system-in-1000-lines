@@ -36,28 +36,6 @@ struct TarHeader {
 }
 
 impl TarHeader {
-    // const fn empty() -> Self {
-    //     Self {
-    //         name: [0u8; 100],
-    //         mode: [0u8; 8],
-    //         uid: [0u8; 8],
-    //         gid: [0u8; 8],
-    //         size: [0u8; 12],
-    //         mtime: [0u8; 12],
-    //         checksum: [0u8; 8],
-    //         typeflag: 0u8,
-    //         linkname: [0u8; 100],
-    //         magic: [0u8; 6],
-    //         version: [0u8; 2],
-    //         uname: [0u8; 32],
-    //         gname: [0u8; 32],
-    //         devmajor: [0u8; 8],
-    //         devminor: [0u8; 8],
-    //         prefix: [0u8; 155],
-    //         _padding: [0u8; 12],
-    //     }
-    // }
-
     fn zeroed() -> Self {
         // SAFETY: VirtioVirtq contains only structs/arrays of integers and pointers.
         // All-zero bytes is a valid representation: integers become 0, pointer becomes null.
@@ -95,15 +73,6 @@ pub struct File {
 }
 
 impl File {
-    // const fn empty() -> Self {
-    //     Self {
-    //         in_use: false,
-    //         name: [0u8; 100],
-    //         data: [0u8; 1024],
-    //         size: 0,
-    //     }
-    // }
-
     const fn zeroed() -> Self {
         // SAFETY: VirtioVirtq contains only structs/arrays of integers and pointers.
         // All-zero bytes is a valid representation: integers become 0, pointer becomes null.
@@ -111,14 +80,8 @@ impl File {
     }
 }
 
-// #[derive(Clone, Debug)]
-// pub struct Files ( pub RefCell<[File; FILES_MAX]>);
-
 #[derive(Debug)]
 pub struct Files(pub SpinLock<[File; FILES_MAX]>);
-
-//Safety: Single threaded OS
-unsafe impl Sync for Files {}
 
 impl Files {
     pub fn fs_lookup(&self, name: &str) -> Option<usize> {
@@ -136,18 +99,10 @@ impl Files {
     }
 }
 
-// pub static FILES: Files = Files(RefCell::new([File::empty(); FILES_MAX]));
-
 pub static FILES: Files = Files(SpinLock::new([File::zeroed(); FILES_MAX]));
-
-// #[derive(Debug)]
-// pub struct Disk(RefCell<[u8; DISK_MAX_SIZE]>);
 
 #[derive(Debug)]
 pub struct Disk(SpinLock<[u8; DISK_MAX_SIZE]>);
-
-//Safety: Single threaded OS
-unsafe impl Sync for Disk {}
 
 impl Disk {
     const fn empty() -> Self {
@@ -167,7 +122,6 @@ fn oct2int(oct: &[u8]) -> Result<usize, ()> {
         }
     })
 }
-
 
 // Turn the file size into a nul terminated octal string.
 fn int2oct(dec: usize, oct: &mut [u8]) {
@@ -234,10 +188,7 @@ pub fn fs_init() {
         .trim();
         crate::println!("file: {}, size={}", file_name_str, filesz);
 
-        off += align_up(
-            header.size() + filesz,
-                        SECTOR_SIZE
-        );
+        off += align_up( header.size() + filesz, SECTOR_SIZE );
     }
 
     // println!("at the end of fs_init, FILES is {:?}", FILES);

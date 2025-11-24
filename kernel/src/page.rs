@@ -60,7 +60,6 @@ impl IndexMut<usize> for PageTable {
 
 pub fn map_page(table1: &mut PageTable, vaddr: VAddr, paddr: PAddr, flags: usize) {
     assert!(is_aligned(vaddr.as_usize(), PAGE_SIZE), "unaligned vaddr {}", vaddr.as_usize());
-
     assert!(is_aligned(paddr.as_usize(), PAGE_SIZE), "unaligned paddr {}", paddr.as_usize());
 
     let vpn1 = vaddr.vpn1();
@@ -80,12 +79,3 @@ pub fn map_page(table1: &mut PageTable, vaddr: VAddr, paddr: PAddr, flags: usize
     table0[vaddr.vpn0()] = paddr.ppn() | flags | PAGE_V;
 }
 
-// pub fn map_page_new_process(mut page_table: Box<PageTable>) -> Box<PageTable> {
-//     let mut paddr = &raw const __kernel_base as *const _ as usize;
-//     let free_ram_end = &raw const __free_ram_end as *const _ as usize;
-//     while paddr < free_ram_end {
-//         map_page(&mut page_table, VAddr::new(paddr), PAddr::new(paddr), PAGE_R | PAGE_W | PAGE_X);
-//         paddr += PAGE_SIZE;
-//     }
-//     page_table
-// }

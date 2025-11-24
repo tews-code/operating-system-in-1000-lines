@@ -6,21 +6,25 @@ In this chapter, we'll run the application we created in the previous chapter.
 
 In executable file formats like ELF, the load address is stored in its file header (program header in ELF). However, since our application's execution image is a raw binary, we need to prepare it with a fixed value. 
 
-We will create a process for the application, so we add this to `kernel/src/process.rs` like this:
+We will create a process for the application, so we add this to `kernel/src/entry.rs` like this:
 
-```rust [kernel/src/process.rs]
+```rust [kernel/src/entry.rs]
 // The base virtual address of an application image. This needs to match the
 // starting address defined in `user.ld`.
-const USER_BASE: usize = 0x1000000;
+pub const USER_BASE: usize = 0x1000000;
 ```
 
 Also, update the `create_process` function to start the application:
 
-```rust [kernel/src/process.rs]
+```rust [kernel/src/entry.rs]
 fn user_entry() {
     to_do!();
 }
+```
 
+In `kernel/src/process.rs`, we are going to update the `create_process` function to create a process from a user image:
+
+```rust [kernel/src/process.rs]
 pub fn create_process(image: *const u8, image_size: usize) -> usize {
     ...
     let callee_saved_regs: [usize; 13] = [
@@ -72,7 +76,6 @@ pub fn create_process(image: *const u8, image_size: usize) -> usize {
             PAGE_U | PAGE_R | PAGE_W | PAGE_X,
         );
     }
-
 ```
 We've modified `create_process` to take the pointer to the execution image (`image`) and the image size (`image_size`) as arguments. It copies the execution image page by page for the specified size and maps it to the process' page table. Also, it sets the jump destination for the first context switch to `user_entry`. For now, we'll keep this as an empty function.
 
@@ -180,24 +183,26 @@ Disassembly of section .text:
 
 To run applications, we use a CPU mode called *user mode*, or in RISC-V terms, *U-Mode*. It's surprisingly simple to switch to U-Mode. Here's how:
 
-```rust [kernel/src/process.rs]
+```rust [kernel/src/entry.rs]
 ...
+// The base virtual address of an application image. This needs to match the
+// starting address defined in `user.ld`.
+pub const USER_BASE: usize = 0x1000000;
 const SSTATUS_SPIE: usize =  1 << 5;    // Enable user mode
 
-fn user_entry() {
-    unsafe{asm!(
-        "csrw sepc, {sepc}",
-        "csrw sstatus, {sstatus}",
+#[unsafe(naked)]
+pub extern "C" fn  user_entry() {
+    naked_asm!(
+        "li t0, {user_base}",
+        "csrw sepc, t0",
+        "li t0, {sstatus}",
+        "csrw sstatus, t0",
         "sret",
-        sepc = in(reg) USER_BASE,
-        sstatus = in(reg) SSTATUS_SPIE,
-    )}
+        user_base = const USER_BASE,
+        sstatus = const SSTATUS_SPIE,
+    )
 }
 ...
-```
-
-```c [kernel.h]
-#define SSTATUS_SPIE (1 << 5)
 ```
 
 The switch from S-Mode to U-Mode is done with the `sret` instruction. However, before changing the operation mode, it does two writes to CSRs:
@@ -241,7 +246,7 @@ fn main() -> ! {
 This `0x80200000` is a memory area used by the kernel that is mapped on the page table. However, since it is a kernel page where the `U` bit in the page table entry is not set, an exception (page fault) should occur, and the kernel should panic. Let's try it:
 
 ```
-$ ./run.sh
+$ ./os1k.sh
 
 ⚠️ Panic: panicked at kernel/src/entry.rs:133:5:
 unexpected trap scause=0xf, stval=0x80200000, sepc=0x1000022

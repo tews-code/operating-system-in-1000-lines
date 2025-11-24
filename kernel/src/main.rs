@@ -28,7 +28,7 @@ use crate::entry::kernel_entry;
 use crate::process::create_process;
 use crate::tar::fs_init;
 use crate::scheduler::yield_now;
-use crate::virtio::{virtio_blk_init, SECTOR_SIZE, read_write_disk};
+use crate::virtio::virtio_blk_init;
 
 // Safety: Symbols created by linker script
 unsafe extern "C" {
@@ -79,20 +79,11 @@ fn kernel_main() -> ! {
         write_bytes(bss as *mut u8, 0, bss_end as usize - bss as usize);
     }
 
-    write_csr!("stvec", kernel_entry as usize);
+    write_csr!("stvec", kernel_entry as *const () as usize);
 
     virtio_blk_init();
     fs_init();
 
-    // let mut buf: [u8; SECTOR_SIZE] = [0u8; SECTOR_SIZE];
-    // read_write_disk(&mut buf, 0, false /* read from the disk */);
-    // print!("first sector:");
-    // for &b in &buf {
-    //     let _ = crate::sbi::put_byte(b);
-    // }
-    // let s = "hello from kernel!!!";
-    // buf[..s.len()].copy_from_slice(s.as_bytes());
-    // read_write_disk(&mut buf, 0, true /* write to the disk */);
 
     common::println!("Hello World! 🦀");
 
@@ -107,8 +98,6 @@ fn kernel_main() -> ! {
     let shell_start = &raw const _binary_shell_bin_start as *mut u8;
     let shell_size = &raw const _binary_shell_bin_size as usize;  // The symbol _address_ is the size of the binary
     let _ = create_process(shell_start, shell_size);
-
-
 
     yield_now();
 

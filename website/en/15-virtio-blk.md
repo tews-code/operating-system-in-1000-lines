@@ -513,7 +513,7 @@ Lastly, let's try disk I/O. Add the following code to `main.rs`:
 Since we specify `lorem.txt` as the (raw) disk image, its contents should be displayed as-is:
 
 ```
-$ ./run.sh
+$ ./os1k.sh
 
 virtio-blk: capacity is 1024 bytes
 first sector: Lorem ipsum dolor sit amet, consectetur adipiscing elit ...

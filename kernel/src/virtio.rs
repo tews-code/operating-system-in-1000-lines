@@ -117,10 +117,6 @@ struct VirtioBlkReq {
     status: u8,
 }
 
-//Safety: Single threaded OS
-unsafe impl Sync for VirtioBlkReq {}
-
-
 impl VirtioBlkReq {
     fn zeroed() -> Self {
         // SAFETY: VirtioBlkReq is a packed C struct with only integer/array fields.
@@ -175,6 +171,7 @@ fn virtio_reg_fetch_and_or32(offset: u32, value: u32) {
     virtio_reg_write32(offset, virtio_reg_read32(offset) | value);
 }
 
+#[allow(clippy::identity_op)]
 pub fn virtio_blk_init() {
     if virtio_reg_read32(VIRTIO_REG_MAGIC) != 0x74726976 {
         panic!("virtio: invalid magic value");
@@ -259,7 +256,7 @@ fn virtq_is_busy(vq: &VirtioVirtq) -> bool {
 // Reads/writes from/to virtio-blk device.
 pub fn read_write_disk(buf: &mut [u8], sector: u64, is_write: bool) {
     let blk_capacity = BLK_CAPACITY.lock()
-        .expect("block capacity initialised before read_write_disk call.");
+        .expect("block capacity should be initialised before read_write_disk call.");
     if sector >= (blk_capacity / SECTOR_SIZE as u64) {
         println!("virtio: tried to read/write sector={}, but capacity is {}", sector, blk_capacity / SECTOR_SIZE as u64);
         return;
